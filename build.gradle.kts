@@ -1,5 +1,5 @@
 plugins {
-    id("java")
+    id("java-library")
     id("maven-publish")
 }
 
@@ -20,14 +20,13 @@ java {
 }
 
 dependencies {
-    implementation("org.java-websocket:Java-WebSocket:1.5.7")
-    implementation("org.json:json:20240303")
+    api("org.java-websocket:Java-WebSocket:1.5.7")
+    api("org.json:json:20240303")
     implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     implementation("io.jsonwebtoken:jjwt-impl:0.12.6")
     implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
-    implementation("com.google.inject:guice:7.0.0")
     implementation("org.yaml:snakeyaml:2.0")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
