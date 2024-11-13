@@ -23,7 +23,7 @@ import dev.consti.utils.TLSUtils;
  */
 public abstract class SecureWebSocketServer {
 
-    protected final Logger logger;
+    private final Logger logger;
     private WebSocketServer server;
     private final Set<WebSocket> connections = Collections.synchronizedSet(new HashSet<>());
     private final String secret;
@@ -130,7 +130,7 @@ public abstract class SecureWebSocketServer {
      * @param conn    The WebSocket connection that sent the message
      * @param message The received message
      */
-    protected void handleMessage(WebSocket conn, String message) {
+    private void handleMessage(WebSocket conn, String message) {
         JSONObject jsonMessage = new JSONObject(message);
         logger.debug("Received message: {}", jsonMessage);
 
@@ -191,7 +191,7 @@ public abstract class SecureWebSocketServer {
      * @param message The JSON message to broadcast
      * @param client  The WebSocket connection of the sender
      */
-    protected void broadcastMessage(JSONObject message, WebSocket client) {
+    private void broadcastMessage(JSONObject message, WebSocket client) {
         synchronized (connections) {
             for (WebSocket conn : connections) {
                 if (conn != client) {

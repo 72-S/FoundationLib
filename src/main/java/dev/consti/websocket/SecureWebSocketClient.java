@@ -34,7 +34,7 @@ public abstract class SecureWebSocketClient {
         this.secret = secret;
     }
 
-    protected WebSocketClient createWebSocketClient(URI uri) {
+    private WebSocketClient createWebSocketClient(URI uri) {
         return new WebSocketClient(uri) {
 
                 @Override
@@ -121,7 +121,7 @@ public abstract class SecureWebSocketClient {
      *
      * @param message The received message in JSON format
      */
-    protected void handleMessage(String message) {
+    private void handleMessage(String message) {
         try {
             JSONObject jsonMessage = new JSONObject(message);
             logger.debug("Received message: {}", jsonMessage.toString());

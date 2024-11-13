@@ -33,7 +33,7 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
  */
 public final class TLSUtils {
 
-    protected TLSUtils() {
+    private TLSUtils() {
         throw new UnsupportedOperationException("TLSUtils is a utility class and cannot be instantiated.");
     }
 
