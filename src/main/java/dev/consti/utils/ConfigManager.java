@@ -86,7 +86,7 @@ public class ConfigManager {
      * Loads the secret from the specified file.
      * If the file does not exist, it is generated.
      * 
-     * @param fileName The name of the secret file
+     * 
      */
     public void loadSecret() {
         File secretFile = new File(secretFileName);
@@ -140,7 +140,7 @@ public class ConfigManager {
     /**
      * Generates a new secret file if it does not exist.
      * 
-     * @param fileName The name of the secret file
+     * 
      */
     protected void generateSecret() {
         File configDir = new File(configDirectory);
