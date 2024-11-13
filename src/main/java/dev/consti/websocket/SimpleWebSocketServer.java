@@ -21,7 +21,7 @@ import dev.consti.utils.TLSUtils;
  * authentication, and broadcasting. The `onMessage` method is abstract, allowing users to define custom behavior for 
  * handling received messages.
  */
-public abstract class SecureWebSocketServer {
+public abstract class SimpleWebSocketServer {
 
     private final Logger logger;
     private WebSocketServer server;
@@ -34,7 +34,7 @@ public abstract class SecureWebSocketServer {
      * @param logger A logger for logging server events and errors
      * @param secret The secret key required for client authentication
      */
-    public SecureWebSocketServer(Logger logger, String secret) {
+    public SimpleWebSocketServer(Logger logger, String secret) {
         this.logger = logger;
         this.secret = secret;
     }
@@ -191,7 +191,7 @@ public abstract class SecureWebSocketServer {
      * @param message The JSON message to broadcast
      * @param client  The WebSocket connection of the sender
      */
-    private void broadcastMessage(JSONObject message, WebSocket client) {
+    public void broadcastMessage(JSONObject message, WebSocket client) {
         synchronized (connections) {
             for (WebSocket conn : connections) {
                 if (conn != client) {

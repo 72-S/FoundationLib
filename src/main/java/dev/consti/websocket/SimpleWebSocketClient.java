@@ -17,7 +17,7 @@ import dev.consti.utils.TLSUtils;
  * AbstractSecureWebSocketClient provides a secure WebSocket client setup with customizable message handling.
  * Users must extend this class and implement the `onMessage` method for custom message handling.
  */
-public abstract class SecureWebSocketClient {
+public abstract class SimpleWebSocketClient {
 
     private WebSocketClient client;
     private final Logger logger;
@@ -29,7 +29,7 @@ public abstract class SecureWebSocketClient {
      * @param logger A logger for logging client events and errors
      * @param secret The secret key required for client authentication
      */
-    public SecureWebSocketClient(Logger logger, String secret) {
+    public SimpleWebSocketClient(Logger logger, String secret) {
         this.logger = logger;
         this.secret = secret;
     }
