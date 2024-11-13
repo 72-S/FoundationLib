@@ -24,19 +24,28 @@ public class ConfigManager {
     private final Logger logger;
     private final String configDirectory; // Configurable directory for configuration files
     private final String defaultSecretFileName; // Configurable secret file name
-
+    
+    /**
+     * Construtor with default secret file name.
+     *
+     * @param logger              A Logger instance for logging
+     * @param pluginName     The name of the plugin (used for directory namimg)
+     */
+    public ConfigManager(Logger logger, String pluginName) {
+        this(logger, pluginName, "secret.key");
+    }
     /**
      * Constructor for ConfigManager, which takes a Logger, the configuration directory, 
      * and the secret file name.
      * 
      * @param logger              A Logger instance for logging
-     * @param configDirectory     The directory for configuration files
+     * @param pluginName     The name of the plugin (used for directory namimg)
      * @param defaultSecretFileName The default name of the secret file
      */
-    public ConfigManager(Logger logger, String configDirectory, String defaultSecretFileName) {
+    public ConfigManager(Logger logger, String pluginName, String defaultSecretFileName) {
         this.logger = logger;
-        this.configDirectory = configDirectory != null ? configDirectory : "config"; // Default directory if none provided
-        this.defaultSecretFileName = defaultSecretFileName != null ? defaultSecretFileName : "secret.key";
+        this.configDirectory = "plugins" + File.separator + (pluginName != null ? pluginName : "FoundationLib");
+        this.defaultSecretFileName = defaultSecretFileName;
 
         // Set YAML configuration options
         DumperOptions options = new DumperOptions();
