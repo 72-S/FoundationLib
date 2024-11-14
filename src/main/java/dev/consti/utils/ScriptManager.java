@@ -3,6 +3,7 @@ package dev.consti.utils;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -47,6 +48,8 @@ public abstract class ScriptManager {
             Files.list(dir.toPath())
                     .filter(path -> path.toString().endsWith(".yml"))
                     .forEach(this::loadScriptFile);
+
+            logger.debug("All script files have been loaded from directory: {}", scriptsDirectory);
         } catch (IOException e) {
             logger.error("Failed to load scripts: {}", e.getMessage());
         }
@@ -62,7 +65,7 @@ public abstract class ScriptManager {
         // Reload all scripts from the directory
         loadAllScripts();
 
-        logger.info("Scripts have been reloaded.");
+        logger.info("All scripts have been successfully reloaded.");
     }
 
 
@@ -79,7 +82,7 @@ public abstract class ScriptManager {
             ScriptConfig scriptConfig = new ScriptConfig(fileData);
             scripts.put(path.getFileName().toString(), scriptConfig);
 
-            logger.info("Script file loaded: {}", path.getFileName().toString());
+            logger.debug("Script file loaded successfully: {}", path.getFileName().toString());
 
             // Trigger the onFileProcessed method after loading the file
             onFileProcessed(path.getFileName().toString(), scriptConfig);
@@ -95,6 +98,7 @@ public abstract class ScriptManager {
      * @return The ScriptConfig object or null if not found
      */
     public ScriptConfig getScriptConfig(String fileName) {
+        logger.debug("Retrieved config");
         return scripts.get(fileName);
     }
 
@@ -102,24 +106,41 @@ public abstract class ScriptManager {
      * Copies a default script file from resources if it does not exist.
      *
      * @param resourceName The name of the resource to copy
+     * @param targetFileName The target name for the script file
      */
-    public void copyDefaultScript(String resourceName) {
-        Path targetPath = Path.of(scriptsDirectory, resourceName);
-        if (Files.exists(targetPath)) {
+    public void copyDefaultScript(String resourceName, String targetFileName) {
+        File scriptDir = new File(scriptsDirectory);
+        if (!scriptDir.exists() && !scriptDir.mkdirs()) {
+            logger.error("Failed to create script directory: {}", scriptsDirectory);
             return;
         }
 
-        try (InputStream in = getClass().getResourceAsStream("/" + resourceName)) {
-            if (in != null) {
-                Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                logger.info("Default script copied to: {}", targetPath.toString());
-            } else {
-                logger.error("Resource {} not found.", resourceName);
+        File scriptFile = new File(scriptDir, targetFileName);
+
+        if (scriptFile.exists()) {
+            logger.debug("Script file {} already exists, skipping copy.", scriptFile.getAbsolutePath());
+            return;
+        }
+
+        // Copy script file from resources
+        try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
+             OutputStream out = Files.newOutputStream(scriptFile.toPath())) {
+            if (in == null) {
+                logger.error("Resource {} not found in the library JAR.", resourceName);
+                return;
             }
+
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+            logger.info("Default script {} copied to: {}", resourceName, scriptFile.getAbsolutePath());
         } catch (IOException e) {
             logger.error("Failed to copy default script file {}: {}", resourceName, e.getMessage());
         }
     }
+
 
     /**
      * ScriptConfig class represents the configuration of a script.
