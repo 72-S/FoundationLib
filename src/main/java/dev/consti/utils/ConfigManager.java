@@ -54,7 +54,6 @@ public class ConfigManager {
         options.setPrettyFlow(true);
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         yaml = new Yaml(options);
-        loadSecret();
     }
 
     /**
@@ -86,15 +85,11 @@ public class ConfigManager {
     public void reload() {
         // Clear current configuration data and reset the secret
         configData.clear();
-        secret = null;
 
         // Reload all configuration files in the directory
         loadAllConfigs();
 
-        // Reload the secret
-        loadSecret();
-
-        logger.info("All configurations and the secret have been reloaded.");
+        logger.info("All configurations have been reloaded.");
     }
 
 
