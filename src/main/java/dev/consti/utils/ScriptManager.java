@@ -31,14 +31,12 @@ public abstract class ScriptManager {
         options.setPrettyFlow(true);
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         yaml = new Yaml(options);
-
-        loadAllScripts();
     }
 
     /**
      * Loads all YAML script files in the scripts directory.
      */
-    private void loadAllScripts() {
+    public void loadAllScripts() {
         File dir = new File(scriptsDirectory);
         if (!dir.exists() && !dir.mkdirs()) {
             logger.error("Failed to create scripts directory: {}", scriptsDirectory);
@@ -53,6 +51,20 @@ public abstract class ScriptManager {
             logger.error("Failed to load scripts: {}", e.getMessage());
         }
     }
+
+    /**
+     * Reloads all scripts by clearing the current cache and loading the files again.
+     */
+    public void reload() {
+        // Clear the current scripts map
+        scripts.clear();
+
+        // Reload all scripts from the directory
+        loadAllScripts();
+
+        logger.info("Scripts have been reloaded.");
+    }
+
 
     /**
      * Loads a single YAML script file and stores it in the scripts map.

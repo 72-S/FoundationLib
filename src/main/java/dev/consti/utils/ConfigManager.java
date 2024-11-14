@@ -56,6 +56,47 @@ public class ConfigManager {
     }
 
     /**
+     * Loads all YAML configuration files in the config directory.
+     */
+    public void loadAllConfigs() {
+        File configDir = new File(configDirectory);
+        if (!configDir.exists() && !configDir.mkdirs()) {
+            logger.error("Failed to create config directory: {}", configDirectory);
+            return;
+        }
+
+        try {
+            Files.list(configDir.toPath())
+                    .filter(path -> path.toString().endsWith(".yml"))
+                    .forEach(path -> loadConfig(path.getFileName().toString(), path.getFileName().toString()));
+
+            logger.info("All configuration files have been loaded from directory: {}", configDirectory);
+        } catch (IOException e) {
+            logger.error("Failed to load configuration files: {}", e.getMessage());
+        }
+    }
+
+
+    /**
+     * Reloads all configurations and the secret by clearing the current cache
+     * and loading all configuration files again.
+     */
+    public void reload() {
+        // Clear current configuration data and reset the secret
+        configData.clear();
+        secret = null;
+
+        // Reload all configuration files in the directory
+        loadAllConfigs();
+
+        // Reload the secret
+        loadSecret();
+
+        logger.info("All configurations and the secret have been reloaded.");
+    }
+
+
+    /**
      * Loads configuration data from the specified file.
      * If the file does not exist, it is copied from a default resource.
      * 
