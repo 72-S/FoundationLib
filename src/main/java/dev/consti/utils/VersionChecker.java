@@ -25,8 +25,7 @@ public class VersionChecker {
     /**
      * The base URL for the Modrinth API to retrieve project versions. The project ID is added dynamically.
      */
-    private static final String MODRINTH_API_URL = "https://api.modrinth.com/v2/project/" + projectId + "/version";
-
+    private static String MODRINTH_API_URL; 
     /**
      * A pattern to match numeric components of a version string.
      */
@@ -39,6 +38,7 @@ public class VersionChecker {
      */
     public static void setProjectId(String id) {
         projectId = id;
+        MODRINTH_API_URL = "https://api.modrinth.com/v2/project/" + projectId + "/version";
     }
 
     /**
