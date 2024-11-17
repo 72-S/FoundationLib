@@ -119,9 +119,11 @@ public class ConfigManager {
      * 
      */
     public void loadSecret() {
-        File secretFile = new File(secretFileName);
-        generateSecret();
-
+        File secretFile = new File(configDirectory, secretFileName);
+        
+        if (!secretFile.exists()) {
+            generateSecret();
+        }
         // Load the secret file
         try (InputStream inputStream = Files.newInputStream(secretFile.toPath())) {
             secret = new String(inputStream.readAllBytes());
