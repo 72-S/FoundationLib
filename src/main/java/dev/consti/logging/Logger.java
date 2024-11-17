@@ -13,7 +13,7 @@ public class Logger {
 
     /**
      * Constructs a new Logger instance with default settings.
-     * The logger's name will be set to the value of the {@param name} field.
+     * @param name The logger's name will be set to the value of the {@param name} field.
      */
     public Logger(String name) {
         if (name == null || name.isEmpty()) {

@@ -6,7 +6,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,14 +13,24 @@ import java.util.Map;
 
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
+
 import dev.consti.logging.Logger;
 
+/**
+ * ScriptManager is a concrete class for managing scripts data stored in YAML files.
+ */
 public abstract class ScriptManager {
     private final Map<String, ScriptConfig> scripts = new HashMap<>();
     private final Yaml yaml;
     private final Logger logger;
     private final String scriptsDirectory;
 
+    /**
+     * Initializes the ScriptManager with the specified logger and plugin name.
+     *
+     * @param logger     The logger instance used for logging.
+     * @param pluginName The name of the plugin, used to determine the scripts directory.
+     */
     public ScriptManager(Logger logger, String pluginName) {
         this.logger = logger;
         this.scriptsDirectory = "plugins" + File.separator + pluginName + File.separator + "scripts";
@@ -188,6 +197,11 @@ public abstract class ScriptManager {
         private final boolean checkIfExecutorIsPlayer;
         private final boolean checkIfExecutorIsOnServer;
 
+        /**
+         * Creates a new Command object based on the given data.
+         *
+         * @param data A map containing the command configuration values.
+         */
         public Command(Map<String, Object> data) {
             this.command = (String) data.get("command");
             this.delay = (int) data.getOrDefault("delay", 0);
@@ -198,12 +212,40 @@ public abstract class ScriptManager {
             this.checkIfExecutorIsOnServer = (boolean) data.getOrDefault("check-if-executor-is-on-server", true);
         }
 
+
+        /**
+         * @return The command string to be executed.
+         */
         public String getCommand() { return command; }
+
+        /**
+         * @return The delay in seconds before the command is executed.
+         */
         public int getDelay() { return delay; }
+
+        /**
+         * @return A list of target server IDs where the command should be executed.
+         */
         public List<String> getTargetServerIds() { return targetServerIds; }
+
+        /**
+         * @return The executor that should run the command.
+         */
         public String getTargetExecutor() { return targetExecutor; }
+
+        /**
+         * @return Whether the command should wait until the player is online before execution.
+         */
         public boolean shouldWaitUntilPlayerIsOnline() { return waitUntilPlayerIsOnline; }
+
+        /**
+         * @return Whether the server should check if the executor is an instance of Player.
+         */
         public boolean isCheckIfExecutorIsPlayer() { return checkIfExecutorIsPlayer; }
+
+        /**
+         * @return Whether the server should check if the executor is present on the target server.
+         */
         public boolean isCheckIfExecutorIsOnServer() { return checkIfExecutorIsOnServer; }
     }
 
