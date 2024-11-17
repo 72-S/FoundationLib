@@ -120,10 +120,7 @@ public class ConfigManager {
      */
     public void loadSecret() {
         File secretFile = new File(secretFileName);
-
-        if (!secretFile.exists()) {
-            generateSecret();
-        }
+        generateSecret();
 
         // Load the secret file
         try (InputStream inputStream = Files.newInputStream(secretFile.toPath())) {
@@ -180,6 +177,11 @@ public class ConfigManager {
         }
 
         File secretFile = new File(configDir, secretFileName);
+
+        if (secretFile.exists()) {
+            logger.debug("Secret file already exists, skipping copy.");
+            return;
+        }
 
         // Generate the secret file
         try (OutputStream out = Files.newOutputStream(secretFile.toPath())) {
