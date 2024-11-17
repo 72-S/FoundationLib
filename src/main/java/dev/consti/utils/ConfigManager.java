@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -56,27 +57,56 @@ public class ConfigManager {
     }
 
     /**
+     * Loads all YAML configuration files in the config directory.
+     */
+    public void loadAllConfigs() {
+        File configDir = new File(configDirectory);
+        if (!configDir.exists() && !configDir.mkdirs()) {
+            logger.error("Failed to create config directory: {}", configDirectory);
+            return;
+        }
+
+        try {
+            Files.list(configDir.toPath())
+                    .filter(path -> path.toString().endsWith(".yml"))
+                    .forEach(this::loadConfigFile);
+
+            logger.debug("All configuration files have been loaded from directory: {}", configDirectory);
+        } catch (IOException e) {
+            logger.error("Failed to load configuration files: {}", e.getMessage());
+        }
+    }
+
+
+    /**
+     * Reloads all configurations and the secret by clearing the current cache
+     * and loading all configuration files again.
+     */
+    public void reload() {
+        // Clear current configuration data and reset the secret
+        configData.clear();
+
+        // Reload all configuration files in the directory
+        loadAllConfigs();
+
+        logger.info("All configurations have been reloaded.");
+    }
+
+
+    /**
      * Loads configuration data from the specified file.
      * If the file does not exist, it is copied from a default resource.
      * 
-     * @param fileName        The name of configuration file in the resources directory
-     * @param targetFileName  The target name for the configuration file
+     * @param path The path to the YAML script fil
      */
-    public void loadConfig(String fileName, String targetFileName) {
-        File configFile = new File(configDirectory, targetFileName);
-
-        if (!configFile.exists()) {
-            copyConfig(fileName, targetFileName);
-        }
-
-        // Load the config file
-        try (InputStream inputStream = Files.newInputStream(configFile.toPath())) {
+    private void loadConfigFile(Path path) {
+        try (InputStream inputStream = Files.newInputStream(path)) {
             Map<String, Object> fileconfigData = yaml.load(inputStream);
             if (fileconfigData == null) {
                 fileconfigData = new HashMap<>();
             }
-            configData.put(targetFileName, fileconfigData);
-            logger.info("Config file loaded successfully from path: {}", configFile.getAbsolutePath());
+            configData.put(path.getFileName().toString(), fileconfigData);
+            logger.debug("Config file loaded successfully: {}", path.getFileName().toString());
         } catch (IOException e) {
             logger.error("Failed to load config file: {}", e.getMessage());
         }
@@ -98,7 +128,7 @@ public class ConfigManager {
         // Load the secret file
         try (InputStream inputStream = Files.newInputStream(secretFile.toPath())) {
             secret = new String(inputStream.readAllBytes());
-            logger.info("Secret file loaded successfully from path: {}", secretFile.getAbsolutePath());
+            logger.debug("Secret file loaded successfully from path: {}", secretFile.getAbsolutePath());
         } catch (IOException e) {
             logger.error("Failed to load secret file: {}", e.getMessage());
         }
@@ -114,7 +144,7 @@ public class ConfigManager {
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key '{}' from config '{}'", key, fileName);
+            logger.debug("Retrieved key from config '{}'", fileName);
             return fileConfigData.get(key).toString();
         } else {
             logger.error("Key '{}' not found in config '{}'", key, fileName);
@@ -164,10 +194,10 @@ public class ConfigManager {
     /**
      * Copies a default configuration file from resources to the target directory.
      * 
-     * @param fileName       The name of the default resource
+     * @param resourceName       The name of the default resource
      * @param targetFileName The target name for the configuration file
      */
-    protected void copyConfig(String fileName, String targetFileName) {
+    public void copyConfig(String resourceName, String targetFileName) {
         File configDir = new File(configDirectory);
         if (!configDir.exists() && !configDir.mkdirs()) {
             logger.error("Failed to create config directory: {}", configDirectory);
@@ -176,11 +206,16 @@ public class ConfigManager {
 
         File configFile = new File(configDir, targetFileName);
 
+        if (configFile.exists()) {
+            logger.debug("Config file {} already exists, skipping copy.", configFile.getAbsolutePath());
+            return;
+        }
+
         // Copy config file from resources
-        try (InputStream in = getClass().getResourceAsStream("/" + fileName);
+        try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
              OutputStream out = Files.newOutputStream(configFile.toPath())) {
             if (in == null) {
-                logger.error("Resource {} not found in the library JAR.", fileName);
+                logger.error("Resource {} not found in the library JAR.", resourceName);
                 return;
             }
 
@@ -189,9 +224,9 @@ public class ConfigManager {
             while ((len = in.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
-            logger.info("Default {} copied to: {}", fileName, configFile.getAbsolutePath());
+            logger.info("Default {} copied to: {}", resourceName, configFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to copy default config file {}: {}", fileName, e.getMessage());
+            logger.error("Failed to copy default config file {}: {}", resourceName, e.getMessage());
         }
     }
 }

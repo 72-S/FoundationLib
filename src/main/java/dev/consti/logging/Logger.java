@@ -10,7 +10,6 @@ import java.util.logging.Level;
 public class Logger {
     private final java.util.logging.Logger logger;
     private Boolean debug;
-    private String name;
 
     /**
      * Constructs a new Logger instance with default settings.
