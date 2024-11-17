@@ -144,7 +144,7 @@ public class ConfigManager {
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key from config '{}'", fileName);
+            logger.debug("Retrieved key {} from config '{}'",key, fileName);
             return fileConfigData.get(key).toString();
         } else {
             logger.error("Key '{}' not found in config '{}'", key, fileName);
