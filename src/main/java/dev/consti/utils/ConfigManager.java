@@ -119,12 +119,11 @@ public class ConfigManager {
      * 
      */
     public void loadSecret() {
-        File secretFile = new File(secretFileName);
-
+        File secretFile = new File(configDirectory, secretFileName);
+        
         if (!secretFile.exists()) {
             generateSecret();
         }
-
         // Load the secret file
         try (InputStream inputStream = Files.newInputStream(secretFile.toPath())) {
             secret = new String(inputStream.readAllBytes());
@@ -144,7 +143,7 @@ public class ConfigManager {
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key from config '{}'", fileName);
+            logger.debug("Retrieved key {} from config '{}'",key, fileName);
             return fileConfigData.get(key).toString();
         } else {
             logger.error("Key '{}' not found in config '{}'", key, fileName);
@@ -180,6 +179,11 @@ public class ConfigManager {
         }
 
         File secretFile = new File(configDir, secretFileName);
+
+        if (secretFile.exists()) {
+            logger.debug("Secret file already exists, skipping copy.");
+            return;
+        }
 
         // Generate the secret file
         try (OutputStream out = Files.newOutputStream(secretFile.toPath())) {

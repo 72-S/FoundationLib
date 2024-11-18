@@ -10,15 +10,24 @@ import java.util.logging.Level;
 public class Logger {
     private final java.util.logging.Logger logger;
     private Boolean debug;
-    private String name;
 
     /**
      * Constructs a new Logger instance with default settings.
-     * The logger's name will be set to the value of the {@code name} field.
+     * @param name The logger's name will be set to the value of the {@param name} field.
      */
-    public Logger() {
+    public Logger(String name) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Logger name cannot be null or empty");
+        }
         this.logger = java.util.logging.Logger.getLogger(name);
         this.debug = false;
+    }
+
+    /**
+     * Constructs a new Logger instance with default name "Logger"
+     */
+    public Logger(){
+        this("Logger");
     }
 
     /**
@@ -84,14 +93,6 @@ public class Logger {
         this.debug = debug;
     }
 
-    /**
-     * Sets the name of the logger.
-     * 
-     * @param name The name to set for the logger.
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
 
     /**
      * Gets the current debug mode status.
