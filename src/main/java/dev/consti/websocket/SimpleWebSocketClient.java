@@ -109,7 +109,6 @@ public abstract class SimpleWebSocketClient {
     public void sendMessage(JSONObject message) {
         if (client != null && client.isOpen()) {
             client.send(message.toString());
-            logger.debug("Sent message: {}", message.toString());
         } else {
             logger.warn("Client is not connected, so cannot send message.");
         }
@@ -124,7 +123,6 @@ public abstract class SimpleWebSocketClient {
     private void handleMessage(String message) {
         try {
             JSONObject jsonMessage = new JSONObject(message);
-            logger.debug("Received message: {}", jsonMessage.toString());
 
             String status = jsonMessage.optString("status", "unknown");
             if ("success".equals(status)) {
