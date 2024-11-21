@@ -147,5 +147,12 @@ public abstract class SimpleWebSocketClient {
      * @param jsonMessage The received JSON message
      */
     protected abstract void onMessage(JSONObject jsonMessage);
+
+
+    /**
+     * Abstract method to handle custom scripts after authentification.
+     */
+
+    protected abstract void afterAuth();
 }
 
