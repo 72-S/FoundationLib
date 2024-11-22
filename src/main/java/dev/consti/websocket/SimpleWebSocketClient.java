@@ -127,6 +127,7 @@ public abstract class SimpleWebSocketClient {
             String status = jsonMessage.optString("status", "unknown");
             if ("success".equals(status)) {
                 logger.info("Authentication succeeded.");
+                afterAuth();
             } else if ("failure".equals(status)) {
                 logger.error("Authentication failed. Closing connection.");
                 client.close();
@@ -152,7 +153,6 @@ public abstract class SimpleWebSocketClient {
     /**
      * Abstract method to handle custom scripts after authentification.
      */
-
     protected abstract void afterAuth();
 }
 
