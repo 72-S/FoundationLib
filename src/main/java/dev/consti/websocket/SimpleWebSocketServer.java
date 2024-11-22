@@ -1,5 +1,6 @@
 package dev.consti.websocket;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.*;
@@ -77,6 +78,7 @@ public abstract class SimpleWebSocketServer {
                 public void onClose(WebSocket conn, int code, String reason, boolean remote) {
                     connections.remove(conn);
                     pendingAuthConnections.remove(conn);
+                    onConnectionClose(conn, code, reason);
                     logger.info("Connection closed: {} with reason: {}", conn.getRemoteSocketAddress(), reason);
                 }
 
@@ -181,6 +183,8 @@ public abstract class SimpleWebSocketServer {
     private void handleError(Exception ex, String address) {
         if (ex instanceof UnresolvedAddressException) {
             logger.warn("Invalid hostname or address: {}", address);
+        } else if (ex instanceof IOException && ex.getMessage().equals("Connection reset by peer")) {
+            logger.debug("Connection reset by peer: {}", address);
         } else {
             logger.error("An error occurred: {}", ex.getMessage());
             if (logger.getDebug()) ex.printStackTrace();
@@ -195,6 +199,14 @@ public abstract class SimpleWebSocketServer {
      * @param message The received JSON String message
      */
     protected abstract void onMessage(WebSocket conn, String message);
+
+    /**
+     * Abstract method that gets called on connection close.
+     * @param conn The WebSocket connection that got closed
+     * @param code The disconnect code
+     * @param reason The reason why the connection was closed
+     */
+    protected abstract void onConnectionClose(WebSocket conn, int code, String reason);
 
     /**
      * Broadcasts a message to all clients except the sender.
