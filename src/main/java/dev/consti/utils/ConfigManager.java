@@ -19,7 +19,7 @@ import dev.consti.logging.Logger;
  */
 public class ConfigManager {
 
-    private Map<String, Map<String, Object>> configData = new HashMap<>();
+    private final Map<String, Map<String, Object>> configData = new HashMap<>();
     private String secret;
     private final Yaml yaml;
     private final Logger logger;
@@ -27,10 +27,10 @@ public class ConfigManager {
     private final String secretFileName; // Configurable secret file name
     
     /**
-     * Construtor with default secret file name.
+     * Constructor with default secret file name.
      *
      * @param logger              A Logger instance for logging
-     * @param pluginName     The name of the plugin (used for directory namimg)
+     * @param pluginName     The name of the plugin (used for directory naming)
      */
     public ConfigManager(Logger logger, String pluginName) {
         this(logger, pluginName, "secret.key");
@@ -40,7 +40,7 @@ public class ConfigManager {
      * and the secret file name.
      * 
      * @param logger              A Logger instance for logging
-     * @param pluginName     The name of the plugin (used for directory namimg)
+     * @param pluginName     The name of the plugin (used for directory naming)
      * @param secretFileName The default name of the secret file
      */
     public ConfigManager(Logger logger, String pluginName, String secretFileName) {
@@ -143,7 +143,7 @@ public class ConfigManager {
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key {} from config '{}'",key, fileName);
+            logger.debug("Retrieved key '{}' from config '{}'",key, fileName);
             return fileConfigData.get(key).toString();
         } else {
             logger.error("Key '{}' not found in config '{}'", key, fileName);
