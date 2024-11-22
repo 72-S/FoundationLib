@@ -2,16 +2,17 @@ package dev.consti.websocket;
 
 import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import javax.net.ssl.SSLContext;
 
+import dev.consti.json.MessageBuilder;
+import dev.consti.json.MessageParser;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import dev.consti.logging.Logger;
@@ -26,7 +27,9 @@ public abstract class SimpleWebSocketServer {
     private final Logger logger;
     private WebSocketServer server;
     private final Set<WebSocket> connections = Collections.synchronizedSet(new HashSet<>());
+    private final Set<WebSocket> pendingAuthConnections = Collections.synchronizedSet(new HashSet<>());
     private final String secret;
+    private final int authTimeoutMillis = 5000;
 
     /**
      * Constructs a new WebSocketServerBase with the provided logger and secret key for authentication.
@@ -52,11 +55,28 @@ public abstract class SimpleWebSocketServer {
                 @Override
                 public void onOpen(WebSocket conn, ClientHandshake handshake) {
                     logger.info("New connection attempt from {}", conn.getRemoteSocketAddress());
+                    pendingAuthConnections.add(conn);
+
+                    Timer authTimer = new Timer();
+                    authTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            if (pendingAuthConnections.contains(conn)) {
+                                logger.warn("Authentication timeout for connection: {}", conn.getRemoteSocketAddress());
+                                MessageBuilder builder = new MessageBuilder("auth");
+                                builder.addToBody("message", "Authentication timeout.");
+                                builder.withStatus("error");
+                                conn.send(builder.build().toString());
+                                conn.close(4002,"Authentication timeout.");
+                            }
+                        }
+                    }, authTimeoutMillis);
                 }
 
                 @Override
                 public void onClose(WebSocket conn, int code, String reason, boolean remote) {
                     connections.remove(conn);
+                    pendingAuthConnections.remove(conn);
                     logger.info("Connection closed: {} with reason: {}", conn.getRemoteSocketAddress(), reason);
                 }
 
@@ -114,12 +134,8 @@ public abstract class SimpleWebSocketServer {
      *
      * @param message The JSON message to send to all clients
      */
-    public void sendMessage(JSONObject message) {
-        synchronized (connections) {
-            for (WebSocket conn : connections) {
-                conn.send(message.toString());
-            }
-        }
+    public void sendMessage(JSONObject message, WebSocket conn) {
+        conn.send(message.toString());
         logger.debug("Sent message: {}", message.toString());
     }
 
@@ -131,33 +147,28 @@ public abstract class SimpleWebSocketServer {
      * @param message The received message
      */
     private void handleMessage(WebSocket conn, String message) {
-        JSONObject jsonMessage = new JSONObject(message);
-        logger.debug("Received message: {}", jsonMessage);
-
-        if (jsonMessage.has("secret")) {
-            String receivedSecret = jsonMessage.getString("secret");
-            JSONObject response = new JSONObject();
-            if (receivedSecret.equals(secret)) {
-                logger.info("Client authenticated successfully: {}", conn.getRemoteSocketAddress());
-                connections.add(conn);
-                response.put("status", "success").put("message", "Authentication successful");
-            } else {
-                logger.warn("Client failed to authenticate: {}", conn.getRemoteSocketAddress());
-                response.put("status", "failure").put("message", "Authentication failed");
-                conn.send(response.toString());
-                conn.close(4001, "Authentication failed");
-                return;
+        try {
+            MessageParser parser = new MessageParser(message);
+            if (parser.getType().equals("auth")) {
+                pendingAuthConnections.remove(conn);
+                String receivedSecret = parser.getBodyValueAsString("secret");
+                MessageBuilder builder = new MessageBuilder("auth");
+                if (receivedSecret.equals(secret)) {
+                    logger.info("Client authenticated successfully: {}", conn.getRemoteSocketAddress());
+                    connections.add(conn);
+                    builder.withStatus("authenticated");
+                    sendMessage(builder.build(), conn);
+                } else  {
+                    logger.warn("Client failed to authenticate: {}", conn.getRemoteSocketAddress());
+                    builder.withStatus("unauthenticated");
+                    sendMessage(builder.build(), conn);
+                    conn.close(4001, "Authentication failed");
+                }
+            } else if (connections.contains(conn)){
+                onMessage(conn, message);
             }
-            conn.send(response.toString());
-        } else if (connections.contains(conn)) {
-            onMessage(conn, jsonMessage); // Customizable message handling
-        } else {
-            JSONObject unauthorizedResponse = new JSONObject()
-                    .put("status", "error")
-                    .put("message", "Unauthorized");
-            logger.warn("Received message from unauthenticated client: {}", conn.getRemoteSocketAddress());
-            conn.send(unauthorizedResponse.toString());
-            conn.close();
+        } catch (JSONException e) {
+            logger.error("Failed to parse message as JSON: {}", e.getMessage());
         }
     }
 
@@ -181,9 +192,9 @@ public abstract class SimpleWebSocketServer {
      * Implement this method to define custom behavior for received messages.
      *
      * @param conn        The WebSocket connection that sent the message
-     * @param jsonMessage The received JSON message
+     * @param message The received JSON String message
      */
-    protected abstract void onMessage(WebSocket conn, JSONObject jsonMessage);
+    protected abstract void onMessage(WebSocket conn, String message);
 
     /**
      * Broadcasts a message to all clients except the sender.

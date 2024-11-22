@@ -5,6 +5,8 @@ import java.net.URI;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
+import dev.consti.json.MessageBuilder;
+import dev.consti.json.MessageParser;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONException;
@@ -40,8 +42,9 @@ public abstract class SimpleWebSocketClient {
                 @Override
                 public void onOpen(ServerHandshake handshakedata) {
                     logger.info("Connected to server: {}", getURI());
-                    JSONObject authMessage = new JSONObject();
-                    authMessage.put("secret", secret);
+                    MessageBuilder builder = new MessageBuilder("auth");
+                    builder.addToBody("secret", secret);
+                    JSONObject authMessage = builder.build();
                     client.send(authMessage.toString());
                 }
 
@@ -122,19 +125,24 @@ public abstract class SimpleWebSocketClient {
      */
     private void handleMessage(String message) {
         try {
-            JSONObject jsonMessage = new JSONObject(message);
+            MessageParser parser = new MessageParser(message);
+            if (parser.getType().equals("auth")) {
+                String status = parser.getStatus();
 
-            String status = jsonMessage.optString("status", "unknown");
-            if ("success".equals(status)) {
-                logger.info("Authentication succeeded.");
-                afterAuth();
-            } else if ("failure".equals(status)) {
-                logger.error("Authentication failed. Closing connection.");
-                client.close();
-            } else if ("error".equals(status)) {
-                logger.warn("Received error from server: {}", jsonMessage.optString("message"));
+                if ("authenticated".equals(status)) {
+                    logger.info("Authentication succeeded.");
+                    afterAuth();
+                } else if ("unauthenticated".equals(status)) {
+                    logger.error("Authentication failed. Closing connection.");
+                    client.close();
+                } else if ("error".equals(status)) {
+                    logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
+                } else {
+                    logger.error("Received not a valid status");
+                }
+
             } else {
-                onMessage(jsonMessage); // Calls the abstract method for custom message handling
+                onMessage(message);
             }
         } catch (JSONException e) {
             logger.error("Failed to parse message as JSON: {}", e.getMessage());
@@ -145,13 +153,13 @@ public abstract class SimpleWebSocketClient {
      * Abstract method to handle custom messages from the server.
      * Implement this method to define behavior for incoming messages.
      *
-     * @param jsonMessage The received JSON message
+     * @param message The received JSON String message
      */
-    protected abstract void onMessage(JSONObject jsonMessage);
+    protected abstract void onMessage(String message);
 
 
     /**
-     * Abstract method to handle custom scripts after authentification.
+     * Abstract method to handle custom scripts after authentication.
      */
     protected abstract void afterAuth();
 }
