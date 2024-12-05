@@ -1,14 +1,12 @@
 package dev.consti.foundationlib.logging;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
+import org.slf4j.LoggerFactory;
 /**
  * Logger class that provides different levels of logging (info, warning, error, and debug).
  * It uses custom formatting and prints directly to System.out.
  */
 public class Logger {
-    private final String name;
+    private final org.slf4j.Logger logger;
     private Boolean debug;
 
     /**
@@ -20,7 +18,7 @@ public class Logger {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Logger name cannot be null or empty");
         }
-        this.name = name;
+        this.logger = LoggerFactory.getLogger(name);
         this.debug = false;
     }
 
@@ -82,8 +80,6 @@ public class Logger {
      * @param args       The arguments to replace placeholders in the message.
      */
     private void log(String level, String message, boolean extended, Object... args) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-
         String formattedMessage;
         if (extended) {
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
@@ -92,24 +88,35 @@ public class Logger {
             String methodName = caller.getMethodName();
 
             formattedMessage = String.format(
-                "[%s %s]: [%s] (%s#%s): %s",
-                timestamp,
-                level,
-                name,
+                "(%s#%s): %s",
                 className,
                 methodName,
-                message.replace("{}", "%s")
+                message
             );
         } else {
             formattedMessage = String.format(
-                "[%s %s]: [%s] %s",
-                timestamp,
-                level,
-                name,
-                message.replace("{}", "%s")
+                "%s",
+                message
             );
         }
-        System.out.println(String.format(formattedMessage, args));
+
+        switch (level) {
+            case "INFO":
+                logger.info(formattedMessage, args);
+                break;
+            case "WARN":
+                logger.warn(formattedMessage, args);
+                break;
+            case "ERROR":
+                logger.error(formattedMessage, args);
+                break;
+            case "DEBUG":
+                logger.debug(formattedMessage, args);
+                break;
+            default:
+                logger.info(formattedMessage, args); 
+                break;
+        }
     }
 
     /**
