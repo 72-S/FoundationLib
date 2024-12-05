@@ -218,7 +218,7 @@ public abstract class SimpleWebSocketServer {
      * @param message The JSON message to broadcast
      * @param client  The WebSocket connection of the sender
      */
-    public void broadcastMessage(JSONObject message, WebSocket client) {
+    public void broadcastClientMessage(JSONObject message, WebSocket client) {
         synchronized (connections) {
             for (WebSocket conn : connections) {
                 if (conn != client) {
@@ -226,7 +226,21 @@ public abstract class SimpleWebSocketServer {
                 }
             }
         }
-        logger.debug("Broadcasted message: {}", message.toString());
+        logger.debug("Broadcasted Client message: {}", message.toString());
+    }
+
+    /**
+     * Broadcasts a message to all connected clients from the server
+     *
+     * @param message The JSON message to broadcast
+     */
+    public void broadcastServerMessage(JSONObject message) {
+        synchronized (connections) {
+            for (WebSocket conn : connections) {
+                conn.send(message.toString());
+            }
+        }
+        logger.debug("Broadcasted Client message: {}", message.toString());
     }
 }
 
