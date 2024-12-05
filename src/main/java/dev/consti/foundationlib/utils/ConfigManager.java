@@ -1,4 +1,4 @@
-package dev.consti.utils;
+package dev.consti.foundationlib.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,7 +12,7 @@ import java.util.Map;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import dev.consti.logging.Logger;
+import dev.consti.foundationlib.logging.Logger;
 
 /**
  * ConfigManager is a concrete class for managing configuration data stored in YAML files.

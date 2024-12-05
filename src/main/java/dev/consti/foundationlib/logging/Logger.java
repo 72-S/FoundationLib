@@ -1,20 +1,18 @@
-package dev.consti.logging;
+package dev.consti.foundationlib.logging;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.logging.Level;
 
 /**
  * Logger class that provides different levels of logging (info, warning, error, and debug).
- * It uses java.util.logging.Logger as the underlying logging mechanism and supports
- * formatted messages with placeholders.
+ * It uses custom formatting and prints directly to System.out.
  */
 public class Logger {
-    private final java.util.logging.Logger logger;
+    private final String name;
     private Boolean debug;
 
     /**
-     * Constructs a new Logger instance with default settings.
+     * Constructs a new Logger instance with a given name.
      *
      * @param name The logger's name will be set to the value of the {@param name} field.
      */
@@ -22,7 +20,7 @@ public class Logger {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("Logger name cannot be null or empty");
         }
-        this.logger = java.util.logging.Logger.getLogger(name);
+        this.name = name;
         this.debug = false;
     }
 
@@ -40,7 +38,7 @@ public class Logger {
      * @param args    The arguments to replace placeholders in the message.
      */
     public void info(String message, Object... args) {
-        logger.log(Level.INFO, simpleFormat(message, args));
+        log("INFO", message, false, args);
     }
 
     /**
@@ -50,7 +48,7 @@ public class Logger {
      * @param args    The arguments to replace placeholders in the message.
      */
     public void warn(String message, Object... args) {
-        logger.log(Level.WARNING, simpleFormat(message, args));
+        log("WARN", message, false, args);
     }
 
     /**
@@ -60,7 +58,7 @@ public class Logger {
      * @param args    The arguments to replace placeholders in the message.
      */
     public void error(String message, Object... args) {
-        logger.log(Level.SEVERE, simpleFormat(message, args));
+        log("ERROR", message, false, args);
     }
 
     /**
@@ -71,52 +69,47 @@ public class Logger {
      */
     public void debug(String message, Object... args) {
         if (debug) {
-            logger.log(Level.INFO, debugFormat(message, args));
+            log("DEBUG", message, true, args);
         }
     }
 
     /**
-     * Formats a debug message with additional details (timestamp, class, method).
+     * Formats and logs a message with a specific level.
      *
-     * @param message The debug message to log.
-     * @param args    The arguments to replace placeholders in the message.
-     * @return The formatted debug message.
+     * @param level      The log level (e.g., INFO, WARN, ERROR, DEBUG).
+     * @param message    The message to log.
+     * @param extended   Whether to include extended information like caller details.
+     * @param args       The arguments to replace placeholders in the message.
      */
-    private String debugFormat(String message, Object... args) {
-        // Retrieve caller details
-        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-        StackTraceElement caller = stackTrace[3]; // Adjust if method nesting changes
-        String className = caller.getClassName();
-        String methodName = caller.getMethodName();
-
-        // Format timestamp
+    private void log(String level, String message, boolean extended, Object... args) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-        // Construct the debug message
-        String formattedMessage = String.format(
-            "[%s DEBUG]: [%s]-(%s#%s) %s",
-            timestamp,
-            logger.getName(),
-            className,
-            methodName,
-            message
-        );
+        String formattedMessage;
+        if (extended) {
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            StackTraceElement caller = stackTrace[3]; 
+            String className = caller.getClassName();
+            String methodName = caller.getMethodName();
 
-        // Replace "{}" with "%s" for placeholders
-        formattedMessage = formattedMessage.replace("{}", "%s");
-        return String.format(formattedMessage, args);
-    }
-
-    /**
-     * Formats a simple log message (INFO, WARN, ERROR) with placeholders.
-     *
-     * @param message The message to log.
-     * @param args    The arguments to replace placeholders in the message.
-     * @return The formatted message.
-     */
-    private String simpleFormat(String message, Object... args) {
-        String formattedMessage = message.replace("{}", "%s");
-        return String.format(formattedMessage, args);
+            formattedMessage = String.format(
+                "[%s %s]: [%s] (%s#%s): %s",
+                timestamp,
+                level,
+                name,
+                className,
+                methodName,
+                message.replace("{}", "%s")
+            );
+        } else {
+            formattedMessage = String.format(
+                "[%s %s]: [%s] %s",
+                timestamp,
+                level,
+                name,
+                message.replace("{}", "%s")
+            );
+        }
+        System.out.println(String.format(formattedMessage, args));
     }
 
     /**

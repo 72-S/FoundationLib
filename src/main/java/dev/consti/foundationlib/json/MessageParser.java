@@ -1,4 +1,4 @@
-package dev.consti.json;
+package dev.consti.foundationlib.json;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

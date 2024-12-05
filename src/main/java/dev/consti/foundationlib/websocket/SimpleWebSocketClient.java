@@ -1,19 +1,19 @@
-package dev.consti.websocket;
+package dev.consti.foundationlib.websocket;
 
 import java.net.URI;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 
-import dev.consti.json.MessageBuilder;
-import dev.consti.json.MessageParser;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import dev.consti.logging.Logger;
-import dev.consti.utils.TLSUtils;
+import dev.consti.foundationlib.json.MessageBuilder;
+import dev.consti.foundationlib.json.MessageParser;
+import dev.consti.foundationlib.logging.Logger;
+import dev.consti.foundationlib.utils.TLSUtils;
 
 /**
  * AbstractSecureWebSocketClient provides a secure WebSocket client setup with customizable message handling.

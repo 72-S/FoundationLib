@@ -1,14 +1,16 @@
-package dev.consti.websocket;
+package dev.consti.foundationlib.websocket;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.net.ssl.SSLContext;
 
-import dev.consti.json.MessageBuilder;
-import dev.consti.json.MessageParser;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
@@ -16,8 +18,10 @@ import org.java_websocket.server.WebSocketServer;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import dev.consti.logging.Logger;
-import dev.consti.utils.TLSUtils;
+import dev.consti.foundationlib.json.MessageBuilder;
+import dev.consti.foundationlib.json.MessageParser;
+import dev.consti.foundationlib.logging.Logger;
+import dev.consti.foundationlib.utils.TLSUtils;
 /**
  * WebSocketServerBase is an abstract WebSocket server class that provides the main functionality for handling connections,
  * authentication, and broadcasting. The `onMessage` method is abstract, allowing users to define custom behavior for 

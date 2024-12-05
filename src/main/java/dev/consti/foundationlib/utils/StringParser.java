@@ -1,4 +1,4 @@
-package dev.consti.utils;
+package dev.consti.foundationlib.utils;
 
 import java.util.HashMap;
 import java.util.Map;
