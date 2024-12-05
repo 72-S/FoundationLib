@@ -1,6 +1,7 @@
 package dev.consti.foundationlib.logging;
 
 import org.slf4j.LoggerFactory;
+
 /**
  * Logger class that provides different levels of logging (info, warning, error, and debug).
  * It uses custom formatting and prints directly to System.out.
@@ -32,7 +33,7 @@ public class Logger {
     /**
      * Logs an info-level message.
      *
-     * @param message The message to log, using "{}" as placeholders for arguments.
+     * @param message The message to log.
      * @param args    The arguments to replace placeholders in the message.
      */
     public void info(String message, Object... args) {
@@ -42,27 +43,27 @@ public class Logger {
     /**
      * Logs a warning-level message.
      *
-     * @param message The message to log, using "{}" as placeholders for arguments.
+     * @param message The message to log.
      * @param args    The arguments to replace placeholders in the message.
      */
     public void warn(String message, Object... args) {
-        log("WARN", message, false, args);
+        log("WARN", message, debug, args);
     }
 
     /**
      * Logs an error-level message.
      *
-     * @param message The message to log, using "{}" as placeholders for arguments.
+     * @param message The message to log.
      * @param args    The arguments to replace placeholders in the message.
      */
     public void error(String message, Object... args) {
-        log("ERROR", message, false, args);
+        log("ERROR", message, debug, args);
     }
 
     /**
      * Logs a debug-level message. Only logs if debug mode is enabled.
      *
-     * @param message The message to log, using "{}" as placeholders for arguments.
+     * @param message The message to log.
      * @param args    The arguments to replace placeholders in the message.
      */
     public void debug(String message, Object... args) {
@@ -74,10 +75,10 @@ public class Logger {
     /**
      * Formats and logs a message with a specific level.
      *
-     * @param level      The log level (e.g., INFO, WARN, ERROR, DEBUG).
-     * @param message    The message to log.
-     * @param extended   Whether to include extended information like caller details.
-     * @param args       The arguments to replace placeholders in the message.
+     * @param level    The log level (e.g., INFO, WARN, ERROR, DEBUG).
+     * @param message  The message to log.
+     * @param extended Whether to include extended information like caller details.
+     * @param args     The arguments to replace placeholders in the message.
      */
     private void log(String level, String message, boolean extended, Object... args) {
         String formattedMessage;
@@ -94,10 +95,7 @@ public class Logger {
                 message
             );
         } else {
-            formattedMessage = String.format(
-                "%s",
-                message
-            );
+            formattedMessage = message;
         }
 
         switch (level) {
@@ -110,11 +108,8 @@ public class Logger {
             case "ERROR":
                 logger.error(formattedMessage, args);
                 break;
-            case "DEBUG":
-                logger.debug(formattedMessage, args);
-                break;
             default:
-                logger.info(formattedMessage, args); 
+                logger.info(formattedMessage, args); // Fallback
                 break;
         }
     }
