@@ -2,6 +2,7 @@ package dev.consti.foundationlib.websocket;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ public abstract class SimpleWebSocketServer {
     private final Set<WebSocket> pendingAuthConnections = Collections.synchronizedSet(new HashSet<>());
     private final String secret;
     private final int authTimeoutMillis = 5000;
+    private volatile boolean running = false;
 
     /**
      * Constructs a new WebSocketServerBase with the provided logger and secret key for authentication.
@@ -47,6 +49,44 @@ public abstract class SimpleWebSocketServer {
         this.secret = secret;
     }
 
+
+    /**
+     * Checks if the WebSocket server is running.
+     *
+     * @return true if the server is running, false otherwise
+     */
+    public boolean isRunning() {
+        if (server == null) {
+            return false;
+        }
+
+        try {
+            InetSocketAddress address = server.getAddress();
+            if (address != null && isPortInUse(address.getPort())) {
+                return true;
+            }
+        } catch (Exception e) {
+            logger.debug("Error checking server status: {}", e.getMessage());
+        }
+        return false;
+    }
+
+
+    /**
+     * Checks if a port is in use.
+     *
+     * @param port The port to check
+     * @return true if the port is in use, false otherwise
+     */
+    private boolean isPortInUse(int port) {
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            serverSocket.setReuseAddress(true);
+            return false;
+        } catch (IOException e) {
+            return true;
+        }
+    }
+
     /**
      * Starts the WebSocket server on the specified address and port.
      *
@@ -54,6 +94,10 @@ public abstract class SimpleWebSocketServer {
      * @param address The hostname or IP address to bind to
      */
     public void startServer(int port, String address) {
+        if (isRunning()) {
+            logger.warn("WebSocket server is already running on {}:{}", address, port);
+            return;
+        }
         try {
             server = new WebSocketServer(new InetSocketAddress(address, port)) {
 
@@ -98,6 +142,7 @@ public abstract class SimpleWebSocketServer {
 
                 @Override
                 public void onStart() {
+                    running = true;
                     logger.info("Server started on: {}:{}", getAddress().getHostString(), getAddress().getPort());
                 }
             };
@@ -125,6 +170,7 @@ public abstract class SimpleWebSocketServer {
         if (server != null) {
             try {
                 server.stop(timeout);
+                running = false;
                 logger.info("Server stopped successfully");
             } catch (InterruptedException e) {
                 logger.error("Failed to stop server gracefully: {}", e.getMessage());
