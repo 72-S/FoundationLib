@@ -73,7 +73,7 @@ public class ConfigManager {
 
             logger.debug("All configuration files have been loaded from directory: {}", configDirectory);
         } catch (IOException e) {
-            logger.error("Failed to load configuration files: {}", e.getMessage());
+            logger.error("Failed to load configuration files: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -89,7 +89,7 @@ public class ConfigManager {
         // Reload all configuration files in the directory
         loadAllConfigs();
 
-        logger.info("All configurations have been reloaded.");
+        logger.info("All configurations have been successfully reloaded");
     }
 
 
@@ -108,7 +108,7 @@ public class ConfigManager {
             configData.put(path.getFileName().toString(), fileconfigData);
             logger.debug("Config file loaded successfully: {}", path.getFileName().toString());
         } catch (IOException e) {
-            logger.error("Failed to load config file: {}", e.getMessage());
+            logger.error("Failed to load config file: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -129,7 +129,7 @@ public class ConfigManager {
             secret = new String(inputStream.readAllBytes());
             logger.debug("Secret file loaded successfully from path: {}", secretFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to load secret file: {}", e.getMessage());
+            logger.error("Failed to load secret file: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -143,10 +143,10 @@ public class ConfigManager {
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key '{}' from config '{}'",key, fileName);
+            logger.debug("Retrieved key '{}' from config: {}",key, fileName);
             return fileConfigData.get(key).toString();
         } else {
-            logger.error("Key '{}' not found in config '{}'", key, fileName);
+            logger.error("Key '{}' not found in config: {}", key, fileName);
             return null;
         }
     }
@@ -181,7 +181,7 @@ public class ConfigManager {
         File secretFile = new File(configDir, secretFileName);
 
         if (secretFile.exists()) {
-            logger.debug("Secret file already exists, skipping copy.");
+            logger.debug("Secret file already exists, skipping copy");
             return;
         }
 
@@ -191,7 +191,7 @@ public class ConfigManager {
             out.write(secret.getBytes());
             logger.info("Secret file generated successfully at: {}", secretFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to generate secret file: {}", e.getMessage());
+            logger.error("Failed to generate secret file: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -211,7 +211,7 @@ public class ConfigManager {
         File configFile = new File(configDir, targetFileName);
 
         if (configFile.exists()) {
-            logger.debug("Config file {} already exists, skipping copy.", configFile.getAbsolutePath());
+            logger.debug("Config file '{}' already exists, skipping copy", configFile.getAbsolutePath());
             return;
         }
 
@@ -219,7 +219,7 @@ public class ConfigManager {
         try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
              OutputStream out = Files.newOutputStream(configFile.toPath())) {
             if (in == null) {
-                logger.error("Resource {} not found in the library JAR.", resourceName);
+                logger.error("Resource '{}' not found in the plugin JAR", resourceName);
                 return;
             }
 
@@ -228,9 +228,9 @@ public class ConfigManager {
             while ((len = in.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
-            logger.info("Default {} copied to: {}", resourceName, configFile.getAbsolutePath());
+            logger.info("Default '{}' copied to: {}", resourceName, configFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to copy default config file {}: {}", resourceName, e.getMessage());
+            logger.error("Failed to copy default config file {}: {}", resourceName, logger.getDebug() ? e : e.getMessage());
         }
     }
 }

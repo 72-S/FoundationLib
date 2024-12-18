@@ -40,7 +40,7 @@ public abstract class SimpleWebSocketClient {
         return new WebSocketClient(uri) {
 
                 @Override
-                public void onOpen(ServerHandshake handshakedata) {
+                public void onOpen(ServerHandshake data) {
                     logger.info("Connected to server: {}", getURI());
                     MessageBuilder builder = new MessageBuilder("auth");
                     builder.addToBody("secret", secret);
@@ -60,10 +60,7 @@ public abstract class SimpleWebSocketClient {
 
                 @Override
                 public void onError(Exception ex) {
-                    logger.error("An error occurred: {}", ex.getMessage());
-                    if (logger.getDebug()) {
-                        ex.printStackTrace();
-                    }
+                    logger.error("An error occurred: {}", logger.getDebug() ? ex : ex.getMessage());
                 }
             };
     }
@@ -85,10 +82,7 @@ public abstract class SimpleWebSocketClient {
             logger.info("Attempting to connect to server at: {}:{}", address, port);
 
         } catch (Exception e) {
-            logger.error("Connection failed: {}", e.getMessage());
-            if (logger.getDebug()) {
-                e.printStackTrace();
-            }
+            logger.error("Connection failed: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -100,7 +94,7 @@ public abstract class SimpleWebSocketClient {
             client.close();
             logger.info("Disconnected successfully");
         } else {
-            logger.warn("Client is not connected, so no need to disconnect.");
+            logger.warn("Client is not connected, so no need to disconnect");
         }
     }
 
@@ -113,7 +107,7 @@ public abstract class SimpleWebSocketClient {
         if (client != null && client.isOpen()) {
             client.send(message.toString());
         } else {
-            logger.warn("Client is not connected, so cannot send message.");
+            logger.warn("Client is not connected, so cannot send message");
         }
     }
 
@@ -129,23 +123,25 @@ public abstract class SimpleWebSocketClient {
             if (parser.getType().equals("auth")) {
                 String status = parser.getStatus();
 
-                if ("authenticated".equals(status)) {
-                    logger.info("Authentication succeeded.");
-                    afterAuth();
-                } else if ("unauthenticated".equals(status)) {
-                    logger.error("Authentication failed. Closing connection.");
-                    client.close();
-                } else if ("error".equals(status)) {
-                    logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
-                } else {
-                    logger.error("Received not a valid status");
+                switch (status) {
+                    case "authenticated" -> {
+                        logger.info("Authentication succeeded");
+                        afterAuth();
+                    }
+                    case "unauthenticated" -> {
+                        logger.error("Authentication failed");
+                        client.close();
+                    }
+                    case "error" ->
+                            logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
+                    case null, default -> logger.error("Received not a valid status");
                 }
 
             } else {
                 onMessage(message);
             }
         } catch (JSONException e) {
-            logger.error("Failed to parse message as JSON: {}", e.getMessage());
+            logger.error("Failed to parse message: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 

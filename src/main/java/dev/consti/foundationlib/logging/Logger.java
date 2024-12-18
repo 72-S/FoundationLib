@@ -81,22 +81,7 @@ public class Logger {
      * @param args     The arguments to replace placeholders in the message.
      */
     private void log(String level, String message, boolean extended, Object... args) {
-        String formattedMessage;
-        if (extended) {
-            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            StackTraceElement caller = stackTrace[3]; 
-            String className = caller.getClassName();
-            String methodName = caller.getMethodName();
-
-            formattedMessage = String.format(
-                "(%s#%s): %s",
-                className,
-                methodName,
-                message
-            );
-        } else {
-            formattedMessage = message;
-        }
+        String formattedMessage = getString(message, extended);
 
         switch (level) {
             case "INFO":
@@ -112,6 +97,26 @@ public class Logger {
                 logger.info(formattedMessage, args); // Fallback
                 break;
         }
+    }
+
+    private static String getString(String message, boolean extended) {
+        String formattedMessage;
+        if (extended) {
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            StackTraceElement caller = stackTrace[3];
+            String className = caller.getClassName();
+            String methodName = caller.getMethodName();
+
+            formattedMessage = String.format(
+                "(%s#%s): %s",
+                className,
+                methodName,
+                    message
+            );
+        } else {
+            formattedMessage = message;
+        }
+        return formattedMessage;
     }
 
     /**

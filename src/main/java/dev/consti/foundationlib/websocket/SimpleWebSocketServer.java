@@ -3,7 +3,6 @@ package dev.consti.foundationlib.websocket;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.nio.channels.UnresolvedAddressException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -66,7 +65,7 @@ public abstract class SimpleWebSocketServer {
                 return true;
             }
         } catch (Exception e) {
-            logger.debug("Error checking server status: {}", e.getMessage());
+            logger.error("Error checking server status: {}", logger.getDebug() ? e : e.getMessage());
         }
         return false;
     }
@@ -127,7 +126,7 @@ public abstract class SimpleWebSocketServer {
                     connections.remove(conn);
                     pendingAuthConnections.remove(conn);
                     onConnectionClose(conn, code, reason);
-                    logger.info("Connection closed: {} with reason: {}", conn.getRemoteSocketAddress(), reason);
+                    logger.info("Connection '{}' closed with reason: {}", conn.getRemoteSocketAddress(), reason);
                 }
 
                 @Override
@@ -137,27 +136,23 @@ public abstract class SimpleWebSocketServer {
 
                 @Override
                 public void onError(WebSocket conn, Exception ex) {
-                    handleError(ex, address);
+                    logger.error("An error occurred: {}", logger.getDebug() ? ex : ex.getMessage());
                 }
 
                 @Override
                 public void onStart() {
                     running = true;
-                    logger.info("Server started on: {}:{}", getAddress().getHostString(), getAddress().getPort());
+                    logger.info("WebSocket server started on: {}:{}", getAddress().getHostString(), getAddress().getPort());
                 }
             };
 
             SSLContext sslContext = TLSUtils.createServerSSLContext();
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
             server.start();
-            logger.info("WebSocket server initialized on: {}:{}", address, port);
+            logger.info("WebSocket server initialized");
 
-        } catch (UnresolvedAddressException e) {
-            logger.error("Failed to start server: Invalid hostname or address '{}'", address);
-            if (logger.getDebug()) e.printStackTrace();
         } catch (Exception e) {
-            logger.error("An unexpected error occurred during server startup: {}", e.getMessage());
-            if (logger.getDebug()) e.printStackTrace();
+            logger.error("An unexpected error occurred during server startup: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -171,13 +166,12 @@ public abstract class SimpleWebSocketServer {
             try {
                 server.stop(timeout);
                 running = false;
-                logger.info("Server stopped successfully");
+                logger.info("WebSocket server stopped successfully");
             } catch (InterruptedException e) {
-                logger.error("Failed to stop server gracefully: {}", e.getMessage());
-                if (logger.getDebug()) e.printStackTrace();
+                logger.error("Failed to stop server gracefully: {}", logger.getDebug() ? e : e.getMessage());
             }
         } else {
-            logger.warn("Server is not running, so no need to stop.");
+            logger.warn("WebSocket server is not running, so no need to stop.");
         }
     }
 
@@ -188,7 +182,6 @@ public abstract class SimpleWebSocketServer {
      */
     public void sendMessage(JSONObject message, WebSocket conn) {
         conn.send(message.toString());
-        logger.debug("Sent message: {}", message.toString());
     }
 
     /**
@@ -220,24 +213,7 @@ public abstract class SimpleWebSocketServer {
                 onMessage(conn, message);
             }
         } catch (JSONException e) {
-            logger.error("Failed to parse message as JSON: {}", e.getMessage());
-        }
-    }
-
-    /**
-     * Handles errors occurring on the server.
-     *
-     * @param ex      The exception thrown
-     * @param address The server address
-     */
-    private void handleError(Exception ex, String address) {
-        if (ex instanceof UnresolvedAddressException) {
-            logger.warn("Invalid hostname or address: {}", address);
-        } else if (ex instanceof IOException && ex.getMessage().equals("Connection reset by peer")) {
-            logger.debug("Connection reset by peer: {}", address);
-        } else {
-            logger.error("An error occurred: {}", ex.getMessage());
-            if (logger.getDebug()) ex.printStackTrace();
+            logger.error("Failed to parse message: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -272,7 +248,7 @@ public abstract class SimpleWebSocketServer {
                 }
             }
         }
-        logger.debug("Broadcasted Client message: {}", message.toString());
+        logger.debug("Broadcast client message");
     }
 
     /**
@@ -286,7 +262,7 @@ public abstract class SimpleWebSocketServer {
                 conn.send(message.toString());
             }
         }
-        logger.debug("Broadcasted Client message: {}", message.toString());
+        logger.debug("Broadcast client message");
     }
 }
 

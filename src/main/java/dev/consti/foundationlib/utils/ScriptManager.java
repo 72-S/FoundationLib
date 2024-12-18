@@ -29,7 +29,7 @@ public abstract class ScriptManager {
      * Initializes the ScriptManager with the specified logger and plugin name.
      *
      * @param logger     The logger instance used for logging.
-     * @param pluginName The name of the plugin, used to determine the scripts directory.
+     * @param pluginName The name of the plugin, used to determine the script's directory.
      */
     public ScriptManager(Logger logger, String pluginName) {
         this.logger = logger;
@@ -60,7 +60,7 @@ public abstract class ScriptManager {
 
             logger.debug("All script files have been loaded from directory: {}", scriptsDirectory);
         } catch (IOException e) {
-            logger.error("Failed to load scripts: {}", e.getMessage());
+            logger.error("Failed to load scripts: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -74,7 +74,7 @@ public abstract class ScriptManager {
         // Reload all scripts from the directory
         loadAllScripts();
 
-        logger.info("All scripts have been successfully reloaded.");
+        logger.info("All scripts have been successfully reloaded");
     }
 
 
@@ -96,7 +96,7 @@ public abstract class ScriptManager {
             // Trigger the onFileProcessed method after loading the file
             onFileProcessed(path.getFileName().toString(), scriptConfig);
         } catch (IOException e) {
-            logger.error("Failed to load script file {}: {}", path.getFileName(), e.getMessage());
+            logger.error("Failed to load script file '{}': {}", path.getFileName(), logger.getDebug() ? e : e.getMessage());
         }
     }
 
@@ -127,7 +127,7 @@ public abstract class ScriptManager {
         File scriptFile = new File(scriptDir, targetFileName);
 
         if (scriptFile.exists()) {
-            logger.debug("Script file {} already exists, skipping copy.", scriptFile.getAbsolutePath());
+            logger.debug("Script file '{}' already exists, skipping copy", scriptFile.getAbsolutePath());
             return;
         }
 
@@ -135,7 +135,7 @@ public abstract class ScriptManager {
         try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
              OutputStream out = Files.newOutputStream(scriptFile.toPath())) {
             if (in == null) {
-                logger.error("Resource {} not found in the library JAR.", resourceName);
+                logger.error("Resource '{}' not found in the plugin JAR", resourceName);
                 return;
             }
 
@@ -144,9 +144,9 @@ public abstract class ScriptManager {
             while ((len = in.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
-            logger.info("Default script {} copied to: {}", resourceName, scriptFile.getAbsolutePath());
+            logger.info("Default script '{}' copied to: {}", resourceName, scriptFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to copy default script file {}: {}", resourceName, e.getMessage());
+            logger.error("Failed to copy default script file {}: {}", resourceName, logger.getDebug() ? e : e.getMessage());
         }
     }
 
