@@ -191,7 +191,7 @@ public abstract class ScriptManager {
     public static class Command {
         private final String command;
         private final int delay;
-        private final List<String> targetServerIds;
+        private final List<String> targetClientIds;
         private final String targetExecutor;
         private final boolean waitUntilPlayerIsOnline;
         private final boolean checkIfExecutorIsPlayer;
@@ -205,7 +205,7 @@ public abstract class ScriptManager {
         public Command(Map<String, Object> data) {
             this.command = (String) data.get("command");
             this.delay = (int) data.getOrDefault("delay", 0);
-            this.targetServerIds = (List<String>) data.getOrDefault("target-server-ids", new ArrayList<>());
+            this.targetClientIds = (List<String>) data.getOrDefault("target-client-ids", new ArrayList<>());
             this.targetExecutor = (String) data.getOrDefault("target-executor", "console");
             this.waitUntilPlayerIsOnline = (boolean) data.getOrDefault("wait-until-player-is-online", false);
             this.checkIfExecutorIsPlayer = (boolean) data.getOrDefault("check-if-executor-is-player", true);
@@ -226,7 +226,7 @@ public abstract class ScriptManager {
         /**
          * @return A list of target server IDs where the command should be executed.
          */
-        public List<String> getTargetServerIds() { return targetServerIds; }
+        public List<String> getTargetServerIds() { return targetClientIds; }
 
         /**
          * @return The executor that should run the command.
