@@ -226,7 +226,7 @@ public abstract class ScriptManager {
         /**
          * @return A list of target server IDs where the command should be executed.
          */
-        public List<String> getTargetServerIds() { return targetClientIds; }
+        public List<String> getTargetClientIds() { return targetClientIds; }
 
         /**
          * @return The executor that should run the command.
