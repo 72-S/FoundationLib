@@ -103,7 +103,7 @@ public class Logger {
         String formattedMessage;
         if (extended) {
             StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-            StackTraceElement caller = stackTrace[3];
+            StackTraceElement caller = stackTrace[4];
             String className = caller.getClassName();
             String methodName = caller.getMethodName();
 
