@@ -228,7 +228,7 @@ public class ConfigManager {
             while ((len = in.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
-            logger.info("Default '{}' copied to: {}", resourceName, configFile.getAbsolutePath());
+            logger.info("Default config '{}' copied to: {}", resourceName, configFile.getAbsolutePath());
         } catch (IOException e) {
             logger.error("Failed to copy default config file {}: {}", resourceName, logger.getDebug() ? e : e.getMessage());
         }
