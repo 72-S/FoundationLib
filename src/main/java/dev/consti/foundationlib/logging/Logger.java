@@ -113,6 +113,7 @@ public class Logger {
                 methodName,
                     message
             );
+
         } else {
             formattedMessage = message;
         }
