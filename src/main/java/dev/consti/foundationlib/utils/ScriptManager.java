@@ -199,7 +199,6 @@ public abstract class ScriptManager {
 
         /**
          * Creates a new Command object based on the given data.
-         *
          * @param data A map containing the command configuration values.
          */
         public Command(Map<String, Object> data) {
