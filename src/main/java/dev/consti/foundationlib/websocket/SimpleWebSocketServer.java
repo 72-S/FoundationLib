@@ -92,7 +92,7 @@ public abstract class SimpleWebSocketServer {
      * @param port    The port number to listen on
      * @param address The hostname or IP address to bind to
      */
-    public void startServer(int port, String address) {
+    public void startServer(int port, String address, String SAN) {
         if (isRunning()) {
             logger.warn("WebSocket server is already running on {}:{}", address, port);
             return;
@@ -146,7 +146,7 @@ public abstract class SimpleWebSocketServer {
                 }
             };
 
-            SSLContext sslContext = TLSUtils.createServerSSLContext();
+            SSLContext sslContext = TLSUtils.createServerSSLContext(SAN);
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
             server.start();
             logger.info("WebSocket server initialized");
