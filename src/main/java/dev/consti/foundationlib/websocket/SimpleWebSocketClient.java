@@ -16,8 +16,10 @@ import dev.consti.foundationlib.logging.Logger;
 import dev.consti.foundationlib.utils.TLSUtils;
 
 /**
- * AbstractSecureWebSocketClient provides a secure WebSocket client setup with customizable message handling.
- * Users must extend this class and implement the `onMessage` method for custom message handling.
+ * AbstractSecureWebSocketClient provides a secure WebSocket client setup with
+ * customizable message handling.
+ * Users must extend this class and implement the `onMessage` method for custom
+ * message handling.
  */
 public abstract class SimpleWebSocketClient {
 
@@ -26,7 +28,8 @@ public abstract class SimpleWebSocketClient {
     private final String secret;
 
     /**
-     * Constructs a new AbstractSecureWebSocketClient with the provided logger and secret key for authentication.
+     * Constructs a new AbstractSecureWebSocketClient with the provided logger and
+     * secret key for authentication.
      *
      * @param logger A logger for logging client events and errors
      * @param secret The secret key required for client authentication
@@ -39,30 +42,34 @@ public abstract class SimpleWebSocketClient {
     private WebSocketClient createWebSocketClient(URI uri) {
         return new WebSocketClient(uri) {
 
-                @Override
-                public void onOpen(ServerHandshake data) {
+            @Override
+            public void onOpen(ServerHandshake data) {
+                try {
                     logger.info("Connected to server: {}", getURI());
                     MessageBuilder builder = new MessageBuilder("auth");
                     builder.addToBody("secret", secret);
                     JSONObject authMessage = builder.build();
                     client.send(authMessage.toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("Error during WebSocket onOpen", e);
                 }
+            }
 
-                @Override
-                public void onMessage(String message) {
-                    handleMessage(message);
-                }
+            @Override
+            public void onMessage(String message) {
+                handleMessage(message);
+            }
 
-                @Override
-                public void onClose(int code, String reason, boolean remote) {
-                    logger.info("Disconnected from server");
-                }
+            @Override
+            public void onClose(int code, String reason, boolean remote) {
+                logger.info("Disconnected from server");
+            }
 
-                @Override
-                public void onError(Exception ex) {
-                    logger.error("An error occurred: {}", logger.getDebug() ? ex : ex.getMessage());
-                }
-            };
+            @Override
+            public void onError(Exception ex) {
+                logger.error("An error occurred: {}", logger.getDebug() ? ex : ex.getMessage());
+            }
+        };
     }
 
     /**
@@ -83,6 +90,7 @@ public abstract class SimpleWebSocketClient {
 
         } catch (Exception e) {
             logger.error("Connection failed: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Connection failed", e);
         }
     }
 
@@ -91,8 +99,13 @@ public abstract class SimpleWebSocketClient {
      */
     public void disconnect() {
         if (client != null) {
-            client.close();
-            logger.info("Disconnected successfully");
+            try {
+                client.close();
+                logger.info("Disconnected successfully");
+
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to disconnect WebSocket client", e);
+            }
         } else {
             logger.warn("Client is not connected, so no need to disconnect");
         }
@@ -112,7 +125,8 @@ public abstract class SimpleWebSocketClient {
     }
 
     /**
-     * Handles messages received from the server, including authentication checks and error handling.
+     * Handles messages received from the server, including authentication checks
+     * and error handling.
      * Calls the abstract `onMessage` method for further message processing.
      *
      * @param message The received message in JSON format
@@ -133,7 +147,7 @@ public abstract class SimpleWebSocketClient {
                         client.close();
                     }
                     case "error" ->
-                            logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
+                        logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
                     case null, default -> logger.error("Received not a valid status");
                 }
 
@@ -153,10 +167,8 @@ public abstract class SimpleWebSocketClient {
      */
     protected abstract void onMessage(String message);
 
-
     /**
      * Abstract method to handle custom scripts after authentication.
      */
     protected abstract void afterAuth();
 }
-

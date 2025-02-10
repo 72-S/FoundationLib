@@ -49,8 +49,7 @@ public abstract class ScriptManager {
     public void loadAllScripts() {
         File dir = new File(scriptsDirectory);
         if (!dir.exists() && !dir.mkdirs()) {
-            logger.error("Failed to create scripts directory: {}", scriptsDirectory);
-            return;
+            throw new RuntimeException("Failed to create scripts directory: " + scriptsDirectory);
         }
 
         try {
@@ -60,7 +59,7 @@ public abstract class ScriptManager {
 
             logger.debug("All script files have been loaded from directory: {}", scriptsDirectory);
         } catch (IOException e) {
-            logger.error("Failed to load scripts: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to load scripts: " + e.getMessage(), e);
         }
     }
 
@@ -96,7 +95,7 @@ public abstract class ScriptManager {
             // Trigger the onFileProcessed method after loading the file
             onFileProcessed(path.getFileName().toString(), scriptConfig);
         } catch (IOException e) {
-            logger.error("Failed to load script file '{}': {}", path.getFileName(), logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to load script file '" + path.getFileName() + "': " + e.getMessage(), e);
         }
     }
 
@@ -120,8 +119,7 @@ public abstract class ScriptManager {
     public void copyDefaultScript(String resourceName, String targetFileName) {
         File scriptDir = new File(scriptsDirectory);
         if (!scriptDir.exists() && !scriptDir.mkdirs()) {
-            logger.error("Failed to create script directory: {}", scriptsDirectory);
-            return;
+            throw new RuntimeException("Failed to create script directory: " + scriptsDirectory);
         }
 
         File scriptFile = new File(scriptDir, targetFileName);
@@ -135,8 +133,7 @@ public abstract class ScriptManager {
         try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
              OutputStream out = Files.newOutputStream(scriptFile.toPath())) {
             if (in == null) {
-                logger.error("Resource '{}' not found in the plugin JAR", resourceName);
-                return;
+                throw new RuntimeException("Resource '" + resourceName + "' not found in the plugin JAR");
             }
 
             byte[] buffer = new byte[1024];
@@ -146,7 +143,7 @@ public abstract class ScriptManager {
             }
             logger.info("Default script '{}' copied to: {}", resourceName, scriptFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to copy default script file {}: {}", resourceName, logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to copy default script file " + resourceName + ": " + e.getMessage(), e);
         }
     }
 
@@ -161,6 +158,7 @@ public abstract class ScriptManager {
         private final boolean hidePermissionWarning;
         private final List<Command> commands;
 
+        @SuppressWarnings("unchecked")
         public ScriptConfig(Map<String, Object> data) {
             this.name = (String) data.getOrDefault("name", "Unnamed Command");
             this.enabled = (boolean) data.getOrDefault("enabled", false);
@@ -201,6 +199,7 @@ public abstract class ScriptManager {
          * Creates a new Command object based on the given data.
          * @param data A map containing the command configuration values.
          */
+        @SuppressWarnings("unchecked")
         public Command(Map<String, Object> data) {
             this.command = (String) data.get("command");
             this.delay = (int) data.getOrDefault("delay", 0);

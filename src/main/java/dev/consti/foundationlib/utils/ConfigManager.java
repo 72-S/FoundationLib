@@ -15,7 +15,8 @@ import org.yaml.snakeyaml.Yaml;
 import dev.consti.foundationlib.logging.Logger;
 
 /**
- * ConfigManager is a concrete class for managing configuration data stored in YAML files.
+ * ConfigManager is a concrete class for managing configuration data stored in
+ * YAML files.
  */
 public class ConfigManager {
 
@@ -25,21 +26,23 @@ public class ConfigManager {
     private final Logger logger;
     private final String configDirectory; // Configurable directory for configuration files
     private final String secretFileName; // Configurable secret file name
-    
+
     /**
      * Constructor with default secret file name.
      *
-     * @param logger              A Logger instance for logging
-     * @param pluginName     The name of the plugin (used for directory naming)
+     * @param logger     A Logger instance for logging
+     * @param pluginName The name of the plugin (used for directory naming)
      */
     public ConfigManager(Logger logger, String pluginName) {
         this(logger, pluginName, "secret.key");
     }
+
     /**
-     * Constructor for ConfigManager, which takes a Logger, the configuration directory, 
+     * Constructor for ConfigManager, which takes a Logger, the configuration
+     * directory,
      * and the secret file name.
      * 
-     * @param logger              A Logger instance for logging
+     * @param logger         A Logger instance for logging
      * @param pluginName     The name of the plugin (used for directory naming)
      * @param secretFileName The default name of the secret file
      */
@@ -62,8 +65,7 @@ public class ConfigManager {
     public void loadAllConfigs() {
         File configDir = new File(configDirectory);
         if (!configDir.exists() && !configDir.mkdirs()) {
-            logger.error("Failed to create config directory: {}", configDirectory);
-            return;
+            throw new RuntimeException("Failed to create config directory: " + configDirectory);
         }
 
         try {
@@ -73,10 +75,9 @@ public class ConfigManager {
 
             logger.debug("All configuration files have been loaded from directory: {}", configDirectory);
         } catch (IOException e) {
-            logger.error("Failed to load configuration files: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to load configuration files: " + e.getMessage(), e);
         }
     }
-
 
     /**
      * Reloads all configurations and the secret by clearing the current cache
@@ -91,7 +92,6 @@ public class ConfigManager {
 
         logger.info("All configurations have been successfully reloaded");
     }
-
 
     /**
      * Loads configuration data from the specified file.
@@ -108,7 +108,7 @@ public class ConfigManager {
             configData.put(path.getFileName().toString(), fileconfigData);
             logger.debug("Config file loaded successfully: {}", path.getFileName().toString());
         } catch (IOException e) {
-            logger.error("Failed to load config file: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to load config file: " + e.getMessage(), e);
         }
     }
 
@@ -120,7 +120,7 @@ public class ConfigManager {
      */
     public void loadSecret() {
         File secretFile = new File(configDirectory, secretFileName);
-        
+
         if (!secretFile.exists()) {
             generateSecret();
         }
@@ -129,25 +129,24 @@ public class ConfigManager {
             secret = new String(inputStream.readAllBytes());
             logger.debug("Secret file loaded successfully from path: {}", secretFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to load secret file: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to load secret file: " + e.getMessage(), e);
         }
     }
 
     /**
      * Retrieves a configuration value based on the specified key.
      * 
-     * @param key The key for the configuration value
+     * @param key      The key for the configuration value
      * @param fileName The name of the configuration file
      * @return The value as a String, or null if the key does not exist
      */
     public String getKey(String fileName, String key) {
         Map<String, Object> fileConfigData = configData.get(fileName);
         if (fileConfigData != null && fileConfigData.containsKey(key)) {
-            logger.debug("Retrieved key '{}' from config: {}",key, fileName);
+            logger.debug("Retrieved key '{}' from config: {}", key, fileName);
             return fileConfigData.get(key).toString();
         } else {
-            logger.error("Key '{}' not found in config: {}", key, fileName);
-            return null;
+            throw new RuntimeException("Key '" + key + "' not found in config: " + fileName);
         }
     }
 
@@ -174,8 +173,7 @@ public class ConfigManager {
     protected void generateSecret() {
         File configDir = new File(configDirectory);
         if (!configDir.exists() && !configDir.mkdirs()) {
-            logger.error("Failed to create config directory: {}", configDirectory);
-            return;
+            throw new RuntimeException("Failed to create config directory: " + configDirectory);
         }
 
         File secretFile = new File(configDir, secretFileName);
@@ -187,25 +185,24 @@ public class ConfigManager {
 
         // Generate the secret file
         try (OutputStream out = Files.newOutputStream(secretFile.toPath())) {
-            String secret = TLSUtils.generateSecret(); 
+            String secret = TLSUtils.generateSecret();
             out.write(secret.getBytes());
             logger.info("Secret file generated successfully at: {}", secretFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to generate secret file: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to generate secret file: " + e.getMessage(), e);
         }
     }
 
     /**
      * Copies a default configuration file from resources to the target directory.
      * 
-     * @param resourceName       The name of the default resource
+     * @param resourceName   The name of the default resource
      * @param targetFileName The target name for the configuration file
      */
     public void copyConfig(String resourceName, String targetFileName) {
         File configDir = new File(configDirectory);
         if (!configDir.exists() && !configDir.mkdirs()) {
-            logger.error("Failed to create config directory: {}", configDirectory);
-            return;
+            throw new RuntimeException("Failed to create config directory: " + configDirectory);
         }
 
         File configFile = new File(configDir, targetFileName);
@@ -217,10 +214,9 @@ public class ConfigManager {
 
         // Copy config file from resources
         try (InputStream in = getClass().getResourceAsStream("/" + resourceName);
-             OutputStream out = Files.newOutputStream(configFile.toPath())) {
+                OutputStream out = Files.newOutputStream(configFile.toPath())) {
             if (in == null) {
-                logger.error("Resource '{}' not found in the plugin JAR", resourceName);
-                return;
+                throw new RuntimeException("Resource '" + resourceName + "' not found in the plugin JAR");
             }
 
             byte[] buffer = new byte[1024];
@@ -230,8 +226,7 @@ public class ConfigManager {
             }
             logger.info("Default config '{}' copied to: {}", resourceName, configFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.error("Failed to copy default config file {}: {}", resourceName, logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Failed to copy default config file " + resourceName + ": " + e.getMessage(), e);
         }
     }
 }
-

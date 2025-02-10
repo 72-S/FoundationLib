@@ -35,7 +35,6 @@ public abstract class SimpleWebSocketServer {
     private final Set<WebSocket> pendingAuthConnections = Collections.synchronizedSet(new HashSet<>());
     private final String secret;
     private final int authTimeoutMillis = 5000;
-    private volatile boolean running = false;
 
     /**
      * Constructs a new WebSocketServerBase with the provided logger and secret key for authentication.
@@ -95,7 +94,7 @@ public abstract class SimpleWebSocketServer {
     public void startServer(int port, String address) {
         if (isRunning()) {
             logger.warn("WebSocket server is already running on {}:{}", address, port);
-            return;
+            throw new RuntimeException("WebSocket server is already running on " + address + ":" + port);
         }
         try {
             server = new WebSocketServer(new InetSocketAddress(address, port)) {
@@ -141,18 +140,25 @@ public abstract class SimpleWebSocketServer {
 
                 @Override
                 public void onStart() {
-                    running = true;
                     logger.info("WebSocket server started on: {}:{}", getAddress().getHostString(), getAddress().getPort());
                 }
             };
 
             SSLContext sslContext = TLSUtils.createServerSSLContext();
+            if (sslContext == null) {
+                throw new RuntimeException("Failed to initialize SSL context");
+            }
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
             server.start();
+
+            if (!isRunning()) {
+                throw new RuntimeException("WebSocket server failed to start");
+            }
             logger.info("WebSocket server initialized");
 
         } catch (Exception e) {
             logger.error("An unexpected error occurred during server startup: {}", logger.getDebug() ? e : e.getMessage());
+            throw new RuntimeException("Error starting WebSocket server", e);
         }
     }
 
@@ -165,10 +171,10 @@ public abstract class SimpleWebSocketServer {
         if (server != null) {
             try {
                 server.stop(timeout);
-                running = false;
                 logger.info("WebSocket server stopped successfully");
             } catch (InterruptedException e) {
                 logger.error("Failed to stop server gracefully: {}", logger.getDebug() ? e : e.getMessage());
+                throw new RuntimeException("Failed to stop WebSocket server gracefully", e);
             }
         } else {
             logger.warn("WebSocket server is not running, so no need to stop.");
