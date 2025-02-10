@@ -91,7 +91,7 @@ public abstract class SimpleWebSocketServer {
      * @param port    The port number to listen on
      * @param address The hostname or IP address to bind to
      */
-    public void startServer(int port, String address) {
+    public void startServer(int port, String address, String SAN) {
         if (isRunning()) {
             logger.warn("WebSocket server is already running on {}:{}", address, port);
             throw new RuntimeException("WebSocket server is already running on " + address + ":" + port);

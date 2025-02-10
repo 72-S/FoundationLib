@@ -47,9 +47,9 @@ public final class TLSUtils {
      * @return an SSLContext configured for server use.
      * @throws Exception if there is an error generating the SSLContext.
      */
-    public static SSLContext createServerSSLContext() throws Exception {
+    public static SSLContext createServerSSLContext(String SAN) throws Exception {
         KeyPair keyPair = generateKeyPair();
-        X509Certificate certificate = generateSelfSignedCertificate(keyPair);
+        X509Certificate certificate = generateSelfSignedCertificate(keyPair, SAN);
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
         keyStore.setKeyEntry("server", keyPair.getPrivate(), "password".toCharArray(), new X509Certificate[]{certificate});
@@ -89,7 +89,7 @@ public final class TLSUtils {
      * @return a self-signed X509Certificate.
      * @throws Exception if there is an error creating the certificate.
      */
-    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair) throws Exception {
+    private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String SAN) throws Exception {
         X500Name issuer = new X500Name("CN=Server");
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
         Date notBefore = new Date(System.currentTimeMillis() - 10000);
@@ -100,9 +100,13 @@ public final class TLSUtils {
         );
 
         certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.digitalSignature));
+        GeneralName sanName = SAN.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")
+                ? new GeneralName(GeneralName.iPAddress, SAN)
+                : new GeneralName(GeneralName.dNSName, SAN);
         GeneralNames subjectAltNames = new GeneralNames(new GeneralName[]{
             new GeneralName(GeneralName.dNSName, "localhost"),
-            new GeneralName(GeneralName.iPAddress, "127.0.0.1")
+            new GeneralName(GeneralName.iPAddress, "127.0.0.1"),
+            sanName
         });
         certBuilder.addExtension(Extension.subjectAlternativeName, false, subjectAltNames);
 
