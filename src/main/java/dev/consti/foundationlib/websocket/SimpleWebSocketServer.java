@@ -144,7 +144,7 @@ public abstract class SimpleWebSocketServer {
                 }
             };
 
-            SSLContext sslContext = TLSUtils.createServerSSLContext();
+            SSLContext sslContext = TLSUtils.createServerSSLContext(SAN);
             if (sslContext == null) {
                 throw new RuntimeException("Failed to initialize SSL context");
             }
