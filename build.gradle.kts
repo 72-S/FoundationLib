@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.consti"
-version = "1.0.0"
+version = "2.0.0"
 
 repositories {
     mavenCentral()
@@ -45,9 +45,9 @@ tasks.named("build") {
 
 publishing {
     publications {
-        create<MavenPublication>("maven") {
+        create<MavenPublication>("gpr") {
             groupId = project.group.toString()
-            artifactId = project.name
+            artifactId = "foundationlib"
             version = project.version.toString()
 
             from(components["java"])
@@ -56,6 +56,13 @@ publishing {
     }
 
     repositories {
-        mavenLocal()
+        maven {
+            name = "GithubPackages"
+            url = uri("https://maven.pkg.github.com/72-S/FoundationLib")
+            credentials {
+                username = "72-S"
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
     }
 }
