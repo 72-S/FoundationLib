@@ -93,7 +93,6 @@ public abstract class SimpleWebSocketServer {
      */
     public void startServer(int port, String address, String SAN) {
         if (isRunning()) {
-            logger.warn("WebSocket server is already running on {}:{}", address, port);
             throw new RuntimeException("WebSocket server is already running on " + address + ":" + port);
         }
         try {
@@ -150,14 +149,9 @@ public abstract class SimpleWebSocketServer {
             }
             server.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(sslContext));
             server.start();
-
-            if (!isRunning()) {
-                throw new RuntimeException("WebSocket server failed to start");
-            }
             logger.info("WebSocket server initialized");
 
         } catch (Exception e) {
-            logger.error("An unexpected error occurred during server startup: {}", logger.getDebug() ? e : e.getMessage());
             throw new RuntimeException("Error starting WebSocket server", e);
         }
     }
@@ -173,7 +167,6 @@ public abstract class SimpleWebSocketServer {
                 server.stop(timeout);
                 logger.info("WebSocket server stopped successfully");
             } catch (InterruptedException e) {
-                logger.error("Failed to stop server gracefully: {}", logger.getDebug() ? e : e.getMessage());
                 throw new RuntimeException("Failed to stop WebSocket server gracefully", e);
             }
         } else {

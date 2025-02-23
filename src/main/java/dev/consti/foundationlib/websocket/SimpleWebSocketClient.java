@@ -62,7 +62,6 @@ public abstract class SimpleWebSocketClient {
 
             @Override
             public void onClose(int code, String reason, boolean remote) {
-                logger.info("Disconnected from server");
             }
 
             @Override
@@ -89,7 +88,6 @@ public abstract class SimpleWebSocketClient {
             logger.info("Attempting to connect to server at: {}:{}", address, port);
 
         } catch (Exception e) {
-            logger.error("Connection failed: {}", logger.getDebug() ? e : e.getMessage());
             throw new RuntimeException("Connection failed", e);
         }
     }
