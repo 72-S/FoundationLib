@@ -37,9 +37,9 @@ public final class TLSUtils {
         throw new UnsupportedOperationException("TLSUtils is a utility class and cannot be instantiated.");
     }
 
-    static {
-        Security.addProvider(new BouncyCastleProvider());
-    }
+    // static {
+        // Security.addProvider(new BouncyCastleProvider());
+    // }
 
     /**
      * Creates an SSLContext for use by a server, using a self-signed certificate.
@@ -48,6 +48,7 @@ public final class TLSUtils {
      * @throws Exception if there is an error generating the SSLContext.
      */
     public static SSLContext createServerSSLContext(String SAN) throws Exception {
+        bouncyCastleProvider();
         KeyPair keyPair = generateKeyPair();
         X509Certificate certificate = generateSelfSignedCertificate(keyPair, SAN);
         KeyStore keyStore = KeyStore.getInstance("JKS");
@@ -60,6 +61,12 @@ public final class TLSUtils {
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
         return sslContext;
+    }
+
+    private static void bouncyCastleProvider() {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
     }
 
     /**
