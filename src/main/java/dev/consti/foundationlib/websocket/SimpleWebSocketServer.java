@@ -22,9 +22,12 @@ import dev.consti.foundationlib.json.MessageBuilder;
 import dev.consti.foundationlib.json.MessageParser;
 import dev.consti.foundationlib.logging.Logger;
 import dev.consti.foundationlib.utils.TLSUtils;
+
 /**
- * WebSocketServerBase is an abstract WebSocket server class that provides the main functionality for handling connections,
- * authentication, and broadcasting. The `onMessage` method is abstract, allowing users to define custom behavior for 
+ * WebSocketServerBase is an abstract WebSocket server class that provides the
+ * main functionality for handling connections,
+ * authentication, and broadcasting. The `onMessage` method is abstract,
+ * allowing users to define custom behavior for
  * handling received messages.
  */
 public abstract class SimpleWebSocketServer {
@@ -37,7 +40,8 @@ public abstract class SimpleWebSocketServer {
     private final int authTimeoutMillis = 5000;
 
     /**
-     * Constructs a new WebSocketServerBase with the provided logger and secret key for authentication.
+     * Constructs a new WebSocketServerBase with the provided logger and secret key
+     * for authentication.
      *
      * @param logger A logger for logging server events and errors
      * @param secret The secret key required for client authentication
@@ -46,7 +50,6 @@ public abstract class SimpleWebSocketServer {
         this.logger = logger;
         this.secret = secret;
     }
-
 
     /**
      * Checks if the WebSocket server is running.
@@ -68,7 +71,6 @@ public abstract class SimpleWebSocketServer {
         }
         return false;
     }
-
 
     /**
      * Checks if a port is in use.
@@ -113,7 +115,7 @@ public abstract class SimpleWebSocketServer {
                                 builder.addToBody("message", "Authentication timeout.");
                                 builder.withStatus("error");
                                 conn.send(builder.build().toString());
-                                conn.close(4002,"Authentication timeout.");
+                                conn.close(4002, "Authentication timeout.");
                             }
                         }
                     }, authTimeoutMillis);
@@ -139,7 +141,8 @@ public abstract class SimpleWebSocketServer {
 
                 @Override
                 public void onStart() {
-                    logger.info("WebSocket server started on: {}:{}", getAddress().getHostString(), getAddress().getPort());
+                    logger.info("WebSocket server started on: {}:{}", getAddress().getHostString(),
+                            getAddress().getPort());
                 }
             };
 
@@ -164,13 +167,19 @@ public abstract class SimpleWebSocketServer {
     public void stopServer(int timeout) {
         if (server != null) {
             try {
+                logger.debug("Closing all client connections...");
+                for (WebSocket conn : server.getConnections()) {
+                    conn.close(1001, "Server shutdown");
+                }
+
                 server.stop(timeout);
+                server = null;
                 logger.info("WebSocket server stopped successfully");
             } catch (InterruptedException e) {
                 throw new RuntimeException("Failed to stop WebSocket server gracefully", e);
             }
         } else {
-            logger.warn("WebSocket server is not running, so no need to stop.");
+            logger.warn("WebSocket server is not running.");
         }
     }
 
@@ -184,8 +193,10 @@ public abstract class SimpleWebSocketServer {
     }
 
     /**
-     * Handles messages received from clients, including authentication and broadcasting.
-     * Calls the abstract `onMessage` method to allow custom handling of authenticated messages.
+     * Handles messages received from clients, including authentication and
+     * broadcasting.
+     * Calls the abstract `onMessage` method to allow custom handling of
+     * authenticated messages.
      *
      * @param conn    The WebSocket connection that sent the message
      * @param message The received message
@@ -202,13 +213,13 @@ public abstract class SimpleWebSocketServer {
                     connections.add(conn);
                     builder.withStatus("authenticated");
                     sendMessage(builder.build(), conn);
-                } else  {
+                } else {
                     logger.warn("Client failed to authenticate: {}", conn.getRemoteSocketAddress());
                     builder.withStatus("unauthenticated");
                     sendMessage(builder.build(), conn);
                     conn.close(4001, "Authentication failed");
                 }
-            } else if (connections.contains(conn)){
+            } else if (connections.contains(conn)) {
                 onMessage(conn, message);
             }
         } catch (JSONException e) {
@@ -220,15 +231,16 @@ public abstract class SimpleWebSocketServer {
      * Abstract method to handle messages from authenticated clients.
      * Implement this method to define custom behavior for received messages.
      *
-     * @param conn        The WebSocket connection that sent the message
+     * @param conn    The WebSocket connection that sent the message
      * @param message The received JSON String message
      */
     protected abstract void onMessage(WebSocket conn, String message);
 
     /**
      * Abstract method that gets called on connection close.
-     * @param conn The WebSocket connection that got closed
-     * @param code The disconnect code
+     * 
+     * @param conn   The WebSocket connection that got closed
+     * @param code   The disconnect code
      * @param reason The reason why the connection was closed
      */
     protected abstract void onConnectionClose(WebSocket conn, int code, String reason);
@@ -264,4 +276,3 @@ public abstract class SimpleWebSocketServer {
         logger.debug("Broadcast client message");
     }
 }
-

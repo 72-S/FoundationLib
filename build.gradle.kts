@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.consti"
-version = "2.1.2"
+version = "2.1.3"
 
 repositories {
     mavenCentral()
