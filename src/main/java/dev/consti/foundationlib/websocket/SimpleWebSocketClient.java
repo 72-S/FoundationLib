@@ -1,172 +1,160 @@
 package dev.consti.foundationlib.websocket;
 
-import java.net.URI;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import dev.consti.foundationlib.json.MessageBuilder;
 import dev.consti.foundationlib.json.MessageParser;
 import dev.consti.foundationlib.logging.Logger;
-import dev.consti.foundationlib.utils.TLSUtils;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.websocketx.*;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.json.JSONObject;
 
-/**
- * AbstractSecureWebSocketClient provides a secure WebSocket client setup with
- * customizable message handling.
- * Users must extend this class and implement the `onMessage` method for custom
- * message handling.
- */
+import java.net.URI;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 public abstract class SimpleWebSocketClient {
 
-    private WebSocketClient client;
     private final Logger logger;
     private final String secret;
+    private Channel channel;
+    private WebSocketClientHandshaker handshaker;
+    private final AtomicBoolean authenticated = new AtomicBoolean(false);
+    private EventLoopGroup group;
 
-    /**
-     * Constructs a new AbstractSecureWebSocketClient with the provided logger and
-     * secret key for authentication.
-     *
-     * @param logger A logger for logging client events and errors
-     * @param secret The secret key required for client authentication
-     */
     public SimpleWebSocketClient(Logger logger, String secret) {
         this.logger = logger;
         this.secret = secret;
     }
 
-    private WebSocketClient createWebSocketClient(URI uri) {
-        return new WebSocketClient(uri) {
-
-            @Override
-            public void onOpen(ServerHandshake data) {
-                try {
-                    logger.info("Connected to server: {}", getURI());
-                    MessageBuilder builder = new MessageBuilder("auth");
-                    builder.addToBody("secret", secret);
-                    JSONObject authMessage = builder.build();
-                    client.send(authMessage.toString());
-                } catch (Exception e) {
-                    throw new RuntimeException("Error during WebSocket onOpen", e);
-                }
-            }
-
-            @Override
-            public void onMessage(String message) {
-                handleMessage(message);
-            }
-
-            @Override
-            public void onClose(int code, String reason, boolean remote) {
-            }
-
-            @Override
-            public void onError(Exception ex) {
-                logger.error("An error occurred: {}", logger.getDebug() ? ex : ex.getMessage());
-            }
-        };
-    }
-
-    /**
-     * Connects to the WebSocket server at the specified address and port.
-     *
-     * @param address The server's hostname or IP address
-     * @param port    The port number to connect to
-     */
-    public void connect(String address, int port) {
+    public void connect(String host, int port) {
+        group = new NioEventLoopGroup();
         try {
-            client = createWebSocketClient(new URI("wss://" + address + ":" + port));
-            SSLContext sslContext = TLSUtils.createClientSSLContext();
-            SSLSocketFactory factory = sslContext.getSocketFactory();
-            client.setSocketFactory(factory);
+            URI uri = new URI("wss://" + host + ":" + port + "/ws");
+            String scheme = uri.getScheme() == null ? "wss" : uri.getScheme();
+            String hostName = uri.getHost();
+            int portNum = uri.getPort();
 
-            client.connect();
-            logger.info("Attempting to connect to server at: {}:{}", address, port);
+            SslContext sslCtx = SslContextBuilder.forClient()
+                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+
+            handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                    uri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders());
+
+            Bootstrap b = new Bootstrap();
+            b.group(group)
+                    .channel(NioSocketChannel.class)
+                    .handler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) {
+                            ChannelPipeline p = ch.pipeline();
+                            p.addLast(sslCtx.newHandler(ch.alloc(), hostName, portNum));
+                            p.addLast(new HttpClientCodec());
+                            p.addLast(new HttpObjectAggregator(8192));
+                            p.addLast(new SimpleChannelInboundHandler<Object>() {
+
+                                @Override
+                                public void channelActive(ChannelHandlerContext ctx) {
+                                    handshaker.handshake(ctx.channel());
+                                    logger.info("Attempting to connect to server at: {}:{}", hostName, portNum);
+                                }
+
+                                @Override
+                                protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                    Channel ch = ctx.channel();
+                                    if (!handshaker.isHandshakeComplete()) {
+                                        handshaker.finishHandshake(ch, (FullHttpResponse) msg);
+                                        logger.info("Connected to server: {}", uri);
+                                        sendAuthMessage();
+                                        return;
+                                    }
+
+                                    if (msg instanceof FullHttpResponse response) {
+                                        throw new IllegalStateException(
+                                                "Unexpected FullHttpResponse: " + response.status());
+                                    }
+
+                                    if (msg instanceof TextWebSocketFrame frame) {
+                                        handleMessage(frame.text());
+                                    }
+                                }
+
+                                @Override
+                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                                    logger.error("An error occurred: {}", logger.getDebug() ? cause : cause.getMessage());
+                                    ctx.close();
+                                }
+
+                                @Override
+                                public void channelInactive(ChannelHandlerContext ctx) {
+                                    authenticated.set(false);
+                                }
+                            });
+                        }
+                    });
+
+            ChannelFuture future = b.connect(uri.getHost(), uri.getPort()).sync();
+            channel = future.channel();
 
         } catch (Exception e) {
             throw new RuntimeException("Connection failed", e);
         }
     }
 
-    /**
-     * Disconnects from the WebSocket server.
-     */
-    public void disconnect() {
-        if (client != null) {
-            try {
-                client.close();
-                logger.info("Disconnected successfully");
-
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to disconnect WebSocket client", e);
-            }
-        } else {
-            logger.warn("Client is not connected, so no need to disconnect");
-        }
+    private void sendAuthMessage() {
+        MessageBuilder builder = new MessageBuilder("auth");
+        builder.addToBody("secret", secret);
+        sendMessage(builder.build());
     }
 
-    /**
-     * Sends a message to the WebSocket server.
-     *
-     * @param message The JSON message to send to the server
-     */
     public void sendMessage(JSONObject message) {
-        if (client != null && client.isOpen()) {
-            client.send(message.toString());
+        if (channel != null && channel.isActive()) {
+            channel.writeAndFlush(new TextWebSocketFrame(message.toString()));
         } else {
             logger.warn("Client is not connected, so cannot send message");
         }
     }
 
-    /**
-     * Handles messages received from the server, including authentication checks
-     * and error handling.
-     * Calls the abstract `onMessage` method for further message processing.
-     *
-     * @param message The received message in JSON format
-     */
+    public void disconnect() {
+        if (channel != null) {
+            channel.close();
+            logger.info("Disconnected successfully");
+        } else {
+            logger.warn("Client is not connected, so no need to disconnect");
+        }
+    }
+
     private void handleMessage(String message) {
         try {
             MessageParser parser = new MessageParser(message);
-            if (parser.getType().equals("auth")) {
-                String status = parser.getStatus();
-
-                switch (status) {
+            if ("auth".equals(parser.getType())) {
+                switch (parser.getStatus()) {
                     case "authenticated" -> {
                         logger.info("Authentication succeeded");
+                        authenticated.set(true);
                         afterAuth();
                     }
                     case "unauthenticated" -> {
                         logger.error("Authentication failed");
-                        client.close();
+                        disconnect();
                     }
                     case "error" ->
-                        logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
-                    case null, default -> logger.error("Received not a valid status");
+                            logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
+                    default -> logger.error("Received not a valid status");
                 }
-
             } else {
                 onMessage(message);
             }
-        } catch (JSONException e) {
+        } catch (Exception e) {
             logger.error("Failed to parse message: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
-    /**
-     * Abstract method to handle custom messages from the server.
-     * Implement this method to define behavior for incoming messages.
-     *
-     * @param message The received JSON String message
-     */
     protected abstract void onMessage(String message);
 
-    /**
-     * Abstract method to handle custom scripts after authentication.
-     */
     protected abstract void afterAuth();
 }
