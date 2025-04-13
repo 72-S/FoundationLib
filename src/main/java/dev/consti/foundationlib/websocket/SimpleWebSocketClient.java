@@ -1,116 +1,135 @@
 package dev.consti.foundationlib.websocket;
 
+import java.net.URI;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import dev.consti.foundationlib.json.MessageBuilder;
 import dev.consti.foundationlib.json.MessageParser;
 import dev.consti.foundationlib.logging.Logger;
+import dev.consti.foundationlib.utils.TLSUtils;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.*;
-import io.netty.handler.codec.http.websocketx.*;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import org.json.JSONObject;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.handler.ssl.SslHandler;
 
-import java.net.URI;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+/**
+ * AbstractSecureWebSocketClient provides a secure WebSocket client setup with
+ * customizable message handling.
+ * Users must extend this class and implement the `onMessage` method for custom
+ * message handling.
+ */
 public abstract class SimpleWebSocketClient {
 
+    private Channel channel;
+    private EventLoopGroup group;
     private final Logger logger;
     private final String secret;
-    private Channel channel;
+    private URI uri;
     private WebSocketClientHandshaker handshaker;
-    private final AtomicBoolean authenticated = new AtomicBoolean(false);
-    private EventLoopGroup group;
 
+    /**
+     * Constructs a new AbstractSecureWebSocketClient with the provided logger and
+     * secret key for authentication.
+     *
+     * @param logger A logger for logging client events and errors
+     * @param secret The secret key required for client authentication
+     */
     public SimpleWebSocketClient(Logger logger, String secret) {
         this.logger = logger;
         this.secret = secret;
     }
 
-    public void connect(String host, int port) {
-        group = new NioEventLoopGroup();
+    /**
+     * Connects to the WebSocket server at the specified address and port.
+     *
+     * @param address The server's hostname or IP address
+     * @param port    The port number to connect to
+     */
+    public void connect(String address, int port) {
         try {
-            URI uri = new URI("wss://" + host + ":" + port + "/ws");
-            String scheme = uri.getScheme() == null ? "wss" : uri.getScheme();
-            String hostName = uri.getHost();
-            int portNum = uri.getPort();
+            this.uri = new URI("wss://" + address + ":" + port);
+            group = new NioEventLoopGroup();
 
-            SslContext sslCtx = SslContextBuilder.forClient()
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-
-            handshaker = WebSocketClientHandshakerFactory.newHandshaker(
-                    uri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders());
-
-            Bootstrap b = new Bootstrap();
-            b.group(group)
+            final SSLContext sslContext = TLSUtils.createClientSSLContext();
+            if (sslContext == null) {
+                throw new RuntimeException("Failed to initialize SSL context");
+            }
+            Bootstrap bootstrap = new Bootstrap();
+            bootstrap.group(group)
                     .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<Channel>() {
+                    .handler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(Channel ch) {
-                            ChannelPipeline p = ch.pipeline();
-                            p.addLast(sslCtx.newHandler(ch.alloc(), hostName, portNum));
-                            p.addLast(new HttpClientCodec());
-                            p.addLast(new HttpObjectAggregator(8192));
-                            p.addLast(new SimpleChannelInboundHandler<Object>() {
+                        protected void initChannel(SocketChannel ch) throws Exception {
+                            SSLEngine sslEngine = sslContext.createSSLEngine();
+                            sslEngine.setUseClientMode(true);
 
-                                @Override
-                                public void channelActive(ChannelHandlerContext ctx) {
-                                    handshaker.handshake(ctx.channel());
-                                    logger.info("Attempting to connect to server at: {}:{}", hostName, portNum);
-                                }
-
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    Channel ch = ctx.channel();
-                                    if (!handshaker.isHandshakeComplete()) {
-                                        handshaker.finishHandshake(ch, (FullHttpResponse) msg);
-                                        logger.info("Connected to server: {}", uri);
-                                        sendAuthMessage();
-                                        return;
-                                    }
-
-                                    if (msg instanceof FullHttpResponse response) {
-                                        throw new IllegalStateException(
-                                                "Unexpected FullHttpResponse: " + response.status());
-                                    }
-
-                                    if (msg instanceof TextWebSocketFrame frame) {
-                                        handleMessage(frame.text());
-                                    }
-                                }
-
-                                @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                    logger.error("An error occurred: {}", logger.getDebug() ? cause : cause.getMessage());
-                                    ctx.close();
-                                }
-
-                                @Override
-                                public void channelInactive(ChannelHandlerContext ctx) {
-                                    authenticated.set(false);
-                                }
-                            });
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(new SslHandler(sslEngine));
+                            pipeline.addLast(new HttpClientCodec());
+                            pipeline.addLast(new HttpObjectAggregator(8192));
+                            pipeline.addLast(new WebSocketClientHandler());
                         }
                     });
 
-            ChannelFuture future = b.connect(uri.getHost(), uri.getPort()).sync();
-            channel = future.channel();
+            handshaker = WebSocketClientHandshakerFactory.newHandshaker(
+                    uri, WebSocketVersion.V13, null, false, new DefaultHttpHeaders());
 
+            logger.info("Attempting to connect to server at: {}:{}", address, port);
+            ChannelFuture future = bootstrap.connect(uri.getHost(), port).sync();
+            channel = future.channel();
+            
         } catch (Exception e) {
             throw new RuntimeException("Connection failed", e);
         }
     }
 
-    private void sendAuthMessage() {
-        MessageBuilder builder = new MessageBuilder("auth");
-        builder.addToBody("secret", secret);
-        sendMessage(builder.build());
+    /**
+     * Disconnects from the WebSocket server.
+     */
+    public void disconnect() {
+        if (channel != null && channel.isActive()) {
+            try {
+                channel.writeAndFlush(new CloseWebSocketFrame());
+                channel.closeFuture().await(5, TimeUnit.SECONDS);
+                logger.info("Disconnected successfully");
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to disconnect WebSocket client", e);
+            } finally {
+                group.shutdownGracefully();
+            }
+        } else {
+            logger.warn("Client is not connected, so no need to disconnect");
+        }
     }
 
+    /**
+     * Sends a message to the WebSocket server.
+     *
+     * @param message The JSON message to send to the server
+     */
     public void sendMessage(JSONObject message) {
         if (channel != null && channel.isActive()) {
             channel.writeAndFlush(new TextWebSocketFrame(message.toString()));
@@ -119,42 +138,96 @@ public abstract class SimpleWebSocketClient {
         }
     }
 
-    public void disconnect() {
-        if (channel != null) {
-            channel.close();
-            logger.info("Disconnected successfully");
-        } else {
-            logger.warn("Client is not connected, so no need to disconnect");
-        }
-    }
-
+    /**
+     * Handles messages received from the server, including authentication checks
+     * and error handling.
+     * Calls the abstract `onMessage` method for further message processing.
+     *
+     * @param message The received message in JSON format
+     */
     private void handleMessage(String message) {
         try {
             MessageParser parser = new MessageParser(message);
-            if ("auth".equals(parser.getType())) {
-                switch (parser.getStatus()) {
+            if (parser.getType().equals("auth")) {
+                String status = parser.getStatus();
+
+                switch (status) {
                     case "authenticated" -> {
                         logger.info("Authentication succeeded");
-                        authenticated.set(true);
                         afterAuth();
                     }
                     case "unauthenticated" -> {
                         logger.error("Authentication failed");
-                        disconnect();
+                        channel.close();
                     }
                     case "error" ->
-                            logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
-                    default -> logger.error("Received not a valid status");
+                        logger.warn("Received error from server: {}", parser.getBodyValueAsString("message"));
+                    case null, default -> logger.error("Received not a valid status");
                 }
+
             } else {
                 onMessage(message);
             }
-        } catch (Exception e) {
+        } catch (JSONException e) {
             logger.error("Failed to parse message: {}", logger.getDebug() ? e : e.getMessage());
         }
     }
 
+    /**
+     * Abstract method to handle custom messages from the server.
+     * Implement this method to define behavior for incoming messages.
+     *
+     * @param message The received JSON String message
+     */
     protected abstract void onMessage(String message);
 
+    /**
+     * Abstract method to handle custom scripts after authentication.
+     */
     protected abstract void afterAuth();
+
+    /**
+     * WebSocket client handler for Netty-based implementation.
+     */
+    private class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            handshaker.handshake(ctx.channel());
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) {
+            logger.info("WebSocket Client disconnected!");
+        }
+
+        @Override
+        protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+            Channel ch = ctx.channel();
+
+            if (!handshaker.isHandshakeComplete()) {
+                handshaker.finishHandshake(ch, (FullHttpResponse) msg);
+                logger.info("Connected to server: {}", uri);
+                
+                MessageBuilder builder = new MessageBuilder("auth");
+                builder.addToBody("secret", secret);
+                JSONObject authMessage = builder.build();
+                ch.writeAndFlush(new TextWebSocketFrame(authMessage.toString()));
+                return;
+            }
+
+            if (msg instanceof TextWebSocketFrame) {
+                TextWebSocketFrame textFrame = (TextWebSocketFrame) msg;
+                handleMessage(textFrame.text());
+            } else if (msg instanceof CloseWebSocketFrame) {
+                ch.close();
+            }
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            logger.error("An error occurred: {}", logger.getDebug() ? cause : cause.getMessage());
+            ctx.close();
+        }
+    }
 }
