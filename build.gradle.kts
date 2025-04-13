@@ -30,6 +30,10 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-jackson:0.12.6")
     implementation("org.yaml:snakeyaml:2.0")
 
+
+    implementation("org.slf4j:slf4j-api:2.0.12")
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.12")
+
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-core:5.4.0")
