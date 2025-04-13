@@ -262,7 +262,7 @@ public abstract class SimpleWebSocketServer {
      * @param message The JSON message to broadcast
      * @param client  The Channel of the sender
      */
-    public void broadcastServerMessage(JSONObject message, Channel client) {
+    public void broadcastClientMessage(JSONObject message, Channel client) {
         synchronized (connections) {
             for (Channel conn : connections) {
                 if (conn != client) {
@@ -270,6 +270,20 @@ public abstract class SimpleWebSocketServer {
                 }
             }
         }
+    }
+    
+    /**
+     * Broadcasts a message to all connected clients from the server
+     *
+     * @param message The JSON message to broadcast
+     */
+    public void broadcastServerMessage(JSONObject message) {
+        synchronized (connections) {
+            for (Channel conn : connections) {
+                sendMessage(message, conn);
+            }
+        }
+        logger.debug("Broadcast client message");
     }
     
     /**
