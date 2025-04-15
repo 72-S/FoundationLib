@@ -3,6 +3,7 @@ package dev.consti.foundationlib.websocket;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -49,6 +50,7 @@ import io.netty.handler.ssl.SslHandler;
 public abstract class SimpleWebSocketServer {
 
     private final Logger logger;
+    private final Path certPath;
     private Channel serverChannel;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -65,9 +67,10 @@ public abstract class SimpleWebSocketServer {
      * @param logger A logger for logging server events and errors
      * @param secret The secret key required for client authentication
      */
-    public SimpleWebSocketServer(Logger logger, String secret) {
+    public SimpleWebSocketServer(Logger logger, String secret, Path certPath) {
         this.logger = logger;
         this.secret = secret;
+        this.certPath = certPath;
     }
 
     /**
@@ -118,7 +121,7 @@ public abstract class SimpleWebSocketServer {
         try {
             this.serverAddress = new InetSocketAddress(address, port);
             
-            final SSLContext sslContext = TLSUtils.createServerSSLContext(SAN);
+            final SSLContext sslContext = TLSUtils.createServerSSLContext(SAN, certPath);
             if (sslContext == null) {
                 throw new RuntimeException("Failed to initialize SSL context");
             }
