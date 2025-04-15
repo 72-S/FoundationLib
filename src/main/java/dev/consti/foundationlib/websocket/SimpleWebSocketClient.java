@@ -1,7 +1,6 @@
 package dev.consti.foundationlib.websocket;
 
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
@@ -48,7 +47,6 @@ public abstract class SimpleWebSocketClient {
     private EventLoopGroup group;
     private final Logger logger;
     private final String secret;
-    private final Path certPath;
     private URI uri;
     private WebSocketClientHandshaker handshaker;
 
@@ -59,10 +57,9 @@ public abstract class SimpleWebSocketClient {
      * @param logger A logger for logging client events and errors
      * @param secret The secret key required for client authentication
      */
-    public SimpleWebSocketClient(Logger logger, String secret, Path certPath) {
+    public SimpleWebSocketClient(Logger logger, String secret) {
         this.logger = logger;
         this.secret = secret;
-        this.certPath = certPath;
     }
 
     /**
@@ -76,7 +73,7 @@ public abstract class SimpleWebSocketClient {
             this.uri = new URI("wss://" + address + ":" + port);
             group = new NioEventLoopGroup();
 
-            final SSLContext sslContext = TLSUtils.createClientSSLContext(certPath);
+            final SSLContext sslContext = TLSUtils.createClientSSLContext();
             if (sslContext == null) {
                 throw new RuntimeException("Failed to initialize SSL context");
             }
