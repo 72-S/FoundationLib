@@ -15,9 +15,11 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
@@ -38,7 +40,7 @@ public final class TLSUtils {
     }
 
     // static {
-        // Security.addProvider(new BouncyCastleProvider());
+    // Security.addProvider(new BouncyCastleProvider());
     // }
 
     /**
@@ -53,12 +55,13 @@ public final class TLSUtils {
         X509Certificate certificate = generateSelfSignedCertificate(keyPair, SAN);
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
-        keyStore.setKeyEntry("server", keyPair.getPrivate(), "password".toCharArray(), new X509Certificate[]{certificate});
+        keyStore.setKeyEntry("server", keyPair.getPrivate(), "password".toCharArray(),
+                new X509Certificate[] { certificate });
 
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
 
-        SSLContext sslContext = SSLContext.getInstance("TLS");
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
         sslContext.init(kmf.getKeyManagers(), null, new SecureRandom());
         return sslContext;
     }
@@ -76,15 +79,21 @@ public final class TLSUtils {
      * @throws Exception if there is an error generating the SSLContext.
      */
     public static SSLContext createClientSSLContext() throws Exception {
-        TrustManager[] trustAllCerts = new TrustManager[]{
-            new X509TrustManager() {
-                public void checkClientTrusted(X509Certificate[] certs, String authType) { /* No-op */ }
-                public void checkServerTrusted(X509Certificate[] certs, String authType) { /* No-op */ }
-                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
-            }
+        TrustManager[] trustAllCerts = new TrustManager[] {
+                new X509TrustManager() {
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[0];
+                    }
+                }
         };
 
-        SSLContext sslContext = SSLContext.getInstance("TLS");
+        SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
         sslContext.init(null, trustAllCerts, new SecureRandom());
         return sslContext;
     }
@@ -96,6 +105,7 @@ public final class TLSUtils {
      * @return a self-signed X509Certificate.
      * @throws Exception if there is an error creating the certificate.
      */
+
     private static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String SAN) throws Exception {
         X500Name issuer = new X500Name("CN=Server");
         BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
@@ -103,19 +113,27 @@ public final class TLSUtils {
         Date notAfter = new Date(System.currentTimeMillis() + 365L * 86400000L);
 
         X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic()
-        );
+                issuer, serial, notBefore, notAfter, issuer, keyPair.getPublic());
 
-        certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign | KeyUsage.digitalSignature));
+        certBuilder.addExtension(
+                Extension.keyUsage,
+                true,
+                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+
         GeneralName sanName = SAN.matches("\\d+\\.\\d+\\.\\d+\\.\\d+")
                 ? new GeneralName(GeneralName.iPAddress, SAN)
                 : new GeneralName(GeneralName.dNSName, SAN);
-        GeneralNames subjectAltNames = new GeneralNames(new GeneralName[]{
-            new GeneralName(GeneralName.dNSName, "localhost"),
-            new GeneralName(GeneralName.iPAddress, "127.0.0.1"),
-            sanName
+        GeneralNames subjectAltNames = new GeneralNames(new GeneralName[] {
+                new GeneralName(GeneralName.dNSName, "localhost"),
+                new GeneralName(GeneralName.iPAddress, "127.0.0.1"),
+                sanName
         });
         certBuilder.addExtension(Extension.subjectAlternativeName, false, subjectAltNames);
+
+        certBuilder.addExtension(
+                Extension.extendedKeyUsage,
+                false,
+                new ExtendedKeyUsage(KeyPurposeId.id_kp_serverAuth));
 
         ContentSigner signer = new JcaContentSignerBuilder("SHA256WithRSAEncryption").build(keyPair.getPrivate());
         X509CertificateHolder certHolder = certBuilder.build(signer);
@@ -143,5 +161,3 @@ public final class TLSUtils {
         return new BigInteger(256, new SecureRandom()).toString(32);
     }
 }
-
-
