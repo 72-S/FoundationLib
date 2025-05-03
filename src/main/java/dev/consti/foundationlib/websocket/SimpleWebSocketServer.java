@@ -3,8 +3,10 @@ package dev.consti.foundationlib.websocket;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -23,6 +25,7 @@ import dev.consti.foundationlib.utils.TLSUtils;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -57,6 +60,8 @@ public abstract class SimpleWebSocketServer {
     private final String secret;
     private final int authTimeoutMillis = 5000;
     private InetSocketAddress serverAddress;
+
+    private final List<ChannelHandler> extraHandlers = new ArrayList<>();
     
     /**
      * Constructs a new WebSocketServerBase with the provided logger and secret key
@@ -88,6 +93,26 @@ public abstract class SimpleWebSocketServer {
             logger.error("Error checking server status: {}", logger.getDebug() ? e : e.getMessage());
         }
         return false;
+    }
+
+
+    /**
+     * Adds external ChannelHandler
+     *
+     * @param handler Handler object
+     */
+    public void addHttpHandler(ChannelHandler handler) {
+        extraHandlers.add(handler);
+    }
+
+
+    /**
+     * Get the current connections map
+     *
+     * @return Returns connections set
+     */
+    public Set<Channel> getConnections() {
+        return connections;
     }
 
     /**
@@ -136,11 +161,17 @@ public abstract class SimpleWebSocketServer {
                         protected void initChannel(SocketChannel ch) throws Exception {
                             SSLEngine sslEngine = sslContext.createSSLEngine();
                             sslEngine.setUseClientMode(false);
+
                             
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(new SslHandler(sslEngine));
                             pipeline.addLast(new HttpServerCodec());
                             pipeline.addLast(new HttpObjectAggregator(65536));
+
+                            for (ChannelHandler handler : extraHandlers) {
+                                pipeline.addLast(handler);
+                            }
+
                             pipeline.addLast(new WebSocketServerProtocolHandler("/", null, true));
                             pipeline.addLast(new WebSocketFrameHandler());
                         }
@@ -294,7 +325,6 @@ public abstract class SimpleWebSocketServer {
         @Override
         public void channelActive(ChannelHandlerContext ctx) {
             Channel conn = ctx.channel();
-            logger.info("New connection attempt from {}", conn.remoteAddress());
             pendingAuthConnections.add(conn);
             
             Timer authTimer = new Timer();
@@ -302,7 +332,7 @@ public abstract class SimpleWebSocketServer {
                 @Override
                 public void run() {
                     if (pendingAuthConnections.contains(conn)) {
-                        logger.warn("Authentication timeout for connection: {}", conn.remoteAddress());
+                        // logger.warn("Authentication timeout for connection: {}", conn.remoteAddress());
                         MessageBuilder builder = new MessageBuilder("auth");
                         builder.addToBody("message", "Authentication timeout.");
                         builder.withStatus("error");
@@ -319,7 +349,6 @@ public abstract class SimpleWebSocketServer {
             connections.remove(conn);
             pendingAuthConnections.remove(conn);
             onConnectionClose(conn, 1000, "Connection closed");
-            logger.info("Connection '{}' closed", conn.remoteAddress());
         }
         
         @Override
